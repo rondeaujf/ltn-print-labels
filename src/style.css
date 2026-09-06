@@ -1,0 +1,53 @@
+/* Styles de l'APERÇU uniquement (createLabelPreview). Le PDF final est rendu
+   côté serveur (mustache + mPDF) et n'utilise pas cette feuille. */
+
+.lpl-preview {
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 8px;
+  background: #e9edf2;
+}
+
+.lpl-preview__scaler {
+  transform-origin: top left;
+}
+
+.lpl-page {
+  box-sizing: border-box;
+  padding: 7mm;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+
+.lpl-grid {
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 0 auto;
+}
+
+.lpl-grid td {
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  overflow: hidden;
+  border: 1px solid #000;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: var(--f);
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.lpl-grid td.lpl-cell--empty {
+  border-color: #b0b0b0;
+}
+
+.lpl-cell__lvl {
+  position: absolute;
+  top: 1mm;
+  left: 1.5mm;
+  font-size: 0.5em;
+  font-weight: 700;
+  color: #555;
+}

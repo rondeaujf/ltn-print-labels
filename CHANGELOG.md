@@ -1,0 +1,21 @@
+# Changelog
+
+All notable changes to `ltn-print-labels`.
+
+## 0.1.0
+
+- Initial release. Extracted from letableaunoir's server-side « Étiquettes »
+  export.
+- `computeLabelLayout(students, options)` — pure layout model: whole-group
+  repetition to fill an A4 page (never a partial group), joined cut lines, last
+  row padded with empty cells, portrait/landscape with wider labels allowed in
+  landscape (30–260 mm vs 30–120 mm).
+- `disambiguateFirstNames(students)` — identical first names are disambiguated
+  by the shortest last-name prefix that separates the whole group
+  (`Léa M.` / `Léa C.`, then `Léa Ma.` / `Léa Mi.`); identical last names fall
+  back to a numeric suffix.
+- `resolveLabelText(students, fields)` — `"first"` / `"last"` / `"both"`.
+- `createLabelPreview(container, students, options)` — WYSIWYG full-page
+  preview (real mm page, `transform: scale()` to fit), same layout engine as
+  the output. `options.maxPreviewHeight` (px) also caps the scale so the whole
+  sheet stays visible.

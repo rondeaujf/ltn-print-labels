@@ -1,0 +1,65 @@
+{
+  "name": "ltn-print-labels",
+  "version": "0.1.0",
+  "description": "Standalone vanilla JS module for a printable label grid of student names: last-name disambiguation of identical first names, whole-group repetition to fill A4 pages, portrait/landscape, WYSIWYG full-page preview. No backend.",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./style.css": "./src/style.css"
+  },
+  "sideEffects": [
+    "src/style.css"
+  ],
+  "files": [
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepublishOnly": "npm test && npm run lint && npm run format:check"
+  },
+  "keywords": [
+    "labels",
+    "etiquettes",
+    "print",
+    "seating",
+    "school",
+    "education",
+    "vanilla-js",
+    "no-framework"
+  ],
+  "author": "Jean-François Rondeau",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rondeaujf/ltn-print-labels.git"
+  },
+  "homepage": "https://jfrondeau.fr/projects/print-labels/",
+  "bugs": {
+    "url": "https://github.com/rondeaujf/ltn-print-labels/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.9.5",
+    "vitest": "^4.1.10"
+  }
+}
