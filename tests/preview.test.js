@@ -3,6 +3,12 @@ import { createLabelPreview } from "../src/index.js";
 
 const S = (firstname, lastname, level) => ({ firstname, lastname, level });
 
+// Rapport hauteur/largeur d'une <div class="lpl-page"> (dimensions en px).
+function ratio(host) {
+  const p = host.querySelector(".lpl-page");
+  return parseFloat(p.style.height) / parseFloat(p.style.width);
+}
+
 describe("createLabelPreview", () => {
   let host;
 
@@ -15,15 +21,18 @@ describe("createLabelPreview", () => {
     document.body.appendChild(host);
   });
 
-  it("rend une page A4 dimensionnée en mm et une grille", () => {
+  it("rend une page réduite en px (pas de transform) tenant dans la largeur", () => {
     const preview = createLabelPreview(host, [S("Léa", "Martin")], {
       labelMm: 55,
       orient: "P",
     });
     const page = host.querySelector(".lpl-page");
     expect(page).not.toBeNull();
-    expect(page.style.width).toBe("210mm");
-    expect(page.style.height).toBe("297mm");
+    expect(page.style.transform).toBe("");
+    expect(page.style.width.endsWith("px")).toBe(true);
+    expect(parseFloat(page.style.width)).toBeLessThanOrEqual(600);
+    // A4 portrait : hauteur / largeur ≈ 297 / 210.
+    expect(ratio(host)).toBeCloseTo(297 / 210, 1);
     expect(host.querySelectorAll(".lpl-grid td").length).toBeGreaterThan(0);
     preview.destroy();
     expect(host.querySelector(".lpl-page")).toBeNull();
@@ -34,8 +43,9 @@ describe("createLabelPreview", () => {
       labelMm: 55,
       orient: "P",
     });
+    expect(ratio(host)).toBeCloseTo(297 / 210, 1);
     preview.update(undefined, { labelMm: 55, orient: "L" });
-    expect(host.querySelector(".lpl-page").style.width).toBe("297mm");
+    expect(ratio(host)).toBeCloseTo(210 / 297, 1);
   });
 
   it("affiche le niveau quand showLevel est vrai", () => {
@@ -52,8 +62,8 @@ describe("createLabelPreview", () => {
       orient: "P",
       maxPreviewHeight: 400,
     });
-    // Portrait A4 ~1123 px de haut -> hôte ramené à <= 400 px.
-    expect(parseFloat(host.style.height)).toBeLessThanOrEqual(400);
-    expect(parseFloat(host.style.height)).toBeGreaterThan(0);
+    expect(
+      parseFloat(host.querySelector(".lpl-page").style.height),
+    ).toBeLessThanOrEqual(400);
   });
 });

@@ -14,8 +14,9 @@ same layout logic drives both the live preview and the PDF.
   to fill an A4 page — never a partial group.
 - **Joined labels.** 1px borders double as cut lines.
 - **Portrait / landscape**, with wider labels allowed in landscape.
-- **WYSIWYG preview.** `createLabelPreview` renders a full A4 page at real mm
-  size, scaled down to fit its container — no approximate CSS zoom.
+- **WYSIWYG preview.** `createLabelPreview` renders a full A4 page scaled down
+  to fit its container (computed in real pixels, no CSS transform — cut lines
+  stay a crisp 1px), horizontally centred.
 - **No backend, no network, no runtime dependencies.**
 
 ## Install

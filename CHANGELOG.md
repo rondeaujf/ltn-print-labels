@@ -2,6 +2,16 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.1
+
+- `createLabelPreview` no longer uses `transform: scale()`. Scaling a
+  `border-collapse` table with a transform dropped roughly every other 1px
+  border (sub-pixel rounding) and left the grid drifting off the right of the
+  page. The sheet is now rendered directly at reduced pixel dimensions, so
+  every cut line stays a crisp 1px.
+- The preview host is a flex container that centers the page horizontally.
+- Level badge slightly lighter (`#8a8a8a`, normal weight).
+
 ## 0.1.0
 
 - Initial release. Extracted from letableaunoir's server-side « Étiquettes »
@@ -16,6 +26,5 @@ All notable changes to `ltn-print-labels`.
   back to a numeric suffix.
 - `resolveLabelText(students, fields)` — `"first"` / `"last"` / `"both"`.
 - `createLabelPreview(container, students, options)` — WYSIWYG full-page
-  preview (real mm page, `transform: scale()` to fit), same layout engine as
-  the output. `options.maxPreviewHeight` (px) also caps the scale so the whole
-  sheet stays visible.
+  preview, same layout engine as the output. `options.maxPreviewHeight` (px)
+  caps the height so the whole sheet stays visible.
