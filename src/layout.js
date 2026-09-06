@@ -144,21 +144,26 @@ export function computeLabelLayout(students, options = {}) {
   const showLevel = !!options.showLevel;
 
   const [minMm, maxMm] = LABEL_MM_BOUNDS[orient];
-  const labelWmm = Math.max(
+  const [pageWmm, pageHmm] = PAGE_MM[orient];
+  const usableW = pageWmm - 2 * MARGIN_MM;
+  const usableH = pageHmm - 2 * MARGIN_MM - HEADER_FOOTER_MM;
+
+  // Le curseur donne une largeur CIBLE ; on prend le nombre entier de colonnes
+  // le plus proche et on étire l'étiquette pour PAVER la largeur utile de l'A4
+  // (bord à bord, pas de marge latérale résiduelle — comme une vraie planche
+  // d'étiquettes).
+  const targetWmm = Math.max(
     minMm,
     Math.min(maxMm, Math.round(Number(options.labelMm) || 55)),
   );
+  const cols = Math.max(1, Math.round(usableW / targetWmm));
+  const labelWmm = round1(usableW / cols);
   const labelHmm = round1(labelWmm * HEIGHT_RATIO);
   // « Les deux » = prénom + nom sur l'étiquette : deux mots, il faut une police
   // plus petite pour qu'ils tiennent (aperçu ET PDF, cf. wire lvl_font_mm).
   const fontMm = round1(labelWmm * FONT_RATIO * (fields === "both" ? 0.6 : 1));
   const levelFontMm = round1(labelWmm * FONT_RATIO * LEVEL_FONT_RATIO);
 
-  const [pageWmm, pageHmm] = PAGE_MM[orient];
-  const usableW = pageWmm - 2 * MARGIN_MM;
-  const usableH = pageHmm - 2 * MARGIN_MM - HEADER_FOOTER_MM;
-
-  const cols = Math.max(1, Math.floor(usableW / labelWmm));
   const rowsParPage = Math.max(1, Math.floor(usableH / labelHmm));
   const parPage = cols * rowsParPage;
 

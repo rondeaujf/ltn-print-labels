@@ -2,9 +2,9 @@
    côté serveur (mustache + mPDF) et n'utilise pas cette feuille. */
 
 .lpl-preview {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  /* Bloc (pas flex) : la page est centrée par une marge entière posée en JS,
+     pour que les filets 1px de la grille ne tombent pas sur une demi-pixel. */
+  display: block;
   overflow: auto;
   box-sizing: border-box;
   padding: 8px;

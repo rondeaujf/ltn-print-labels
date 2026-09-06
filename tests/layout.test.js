@@ -78,18 +78,29 @@ describe("computeLabelLayout", () => {
       [S("Bob", "Abel"), S("Chloé", "Meyer"), S("Alice", "Zorro")],
       { labelMm: 55, orient: "P" },
     );
-    expect(layout.cols).toBe(3);
-    expect(layout.labelWmm).toBe(55);
-    expect(layout.labelHmm).toBeCloseTo(23.1, 5);
+    // Curseur 55 mm en portrait -> 4 colonnes qui pavent les 196 mm utiles.
+    expect(layout.cols).toBe(4);
+    expect(layout.cols * layout.labelWmm).toBeCloseTo(196, 0);
+    expect(layout.labelHmm).toBeCloseTo(layout.labelWmm * 0.42, 1);
     expect(layout.levelFontMm).toBeCloseTo(layout.fontMm / 2, 1);
     expect(layout.groupes).toBeGreaterThan(1);
     expect(countNonEmpty(layout)).toBe(3 * layout.groupes);
     // ordre d'entrée préservé (le tri par nom est fait en amont par l'app)
-    expect(layout.rows[0].cells.map((c) => c.name)).toEqual([
+    expect(layout.rows[0].cells.slice(0, 3).map((c) => c.name)).toEqual([
       "Bob",
       "Chloé",
       "Alice",
     ]);
+  });
+
+  it("les colonnes pavent la largeur utile de l'A4 (bord à bord)", () => {
+    for (const orient of ["P", "L"]) {
+      const usable = (orient === "L" ? 297 : 210) - 14;
+      for (const labelMm of [30, 45, 60, 90, 120]) {
+        const l = computeLabelLayout([S("A", "B")], { orient, labelMm });
+        expect(l.cols * l.labelWmm).toBeCloseTo(usable, 0);
+      }
+    }
   });
 
   it("complète la dernière ligne par des cases vides", () => {
@@ -111,7 +122,7 @@ describe("computeLabelLayout", () => {
   });
 
   it("expose rowsPerPage (borne d'aperçu = 1 page)", () => {
-    const students = Array.from({ length: 40 }, (_, i) => S(`E${i}`, `N${i}`));
+    const students = Array.from({ length: 80 }, (_, i) => S(`E${i}`, `N${i}`));
     const layout = computeLabelLayout(students, { labelMm: 55, orient: "P" });
     expect(layout.rowsPerPage).toBeGreaterThan(0);
     // une grande classe déborde : plus de lignes que ce qui tient sur une page
@@ -126,33 +137,26 @@ describe("computeLabelLayout", () => {
     expect(both.levelFontMm).toBeCloseTo(first.levelFontMm, 5);
   });
 
-  it("le paysage élargit la grille", () => {
-    const students = [S("Alice", "Abel")];
-    expect(
-      computeLabelLayout(students, { labelMm: 55, orient: "P" }).cols,
-    ).toBe(3);
-    expect(
-      computeLabelLayout(students, { labelMm: 55, orient: "L" }).cols,
-    ).toBe(5);
+  it("le paysage tient plus de colonnes que le portrait", () => {
+    const s = [S("Alice", "Abel")];
+    const p = computeLabelLayout(s, { labelMm: 55, orient: "P" });
+    const l = computeLabelLayout(s, { labelMm: 55, orient: "L" });
+    expect(l.cols).toBeGreaterThan(p.cols);
   });
 
-  it("borne la largeur selon l'orientation", () => {
+  it("le curseur pilote la taille : plus grand -> moins de colonnes, étiquette plus large", () => {
     const s = [S("Alice", "Abel")];
-    expect(computeLabelLayout(s, { labelMm: 5, orient: "P" }).labelWmm).toBe(
-      30,
-    );
-    expect(computeLabelLayout(s, { labelMm: 999, orient: "P" }).labelWmm).toBe(
-      120,
-    );
-    expect(computeLabelLayout(s, { labelMm: 999, orient: "L" }).labelWmm).toBe(
-      260,
-    );
-    expect(computeLabelLayout(s, { labelMm: 180, orient: "P" }).labelWmm).toBe(
-      120,
-    );
-    expect(computeLabelLayout(s, { labelMm: 180, orient: "L" }).labelWmm).toBe(
-      180,
-    );
+    const petit = computeLabelLayout(s, { labelMm: 35, orient: "P" });
+    const grand = computeLabelLayout(s, { labelMm: 110, orient: "P" });
+    expect(grand.cols).toBeLessThan(petit.cols);
+    expect(grand.labelWmm).toBeGreaterThan(petit.labelWmm);
+    // curseur borné : au plancher on garde plusieurs colonnes, au plafond 1 ou 2
+    expect(
+      computeLabelLayout(s, { labelMm: 5, orient: "P" }).cols,
+    ).toBeGreaterThan(4);
+    expect(
+      computeLabelLayout(s, { labelMm: 999, orient: "P" }).cols,
+    ).toBeLessThanOrEqual(2);
     expect(LABEL_MM_BOUNDS).toEqual({ P: [30, 120], L: [30, 260] });
   });
 

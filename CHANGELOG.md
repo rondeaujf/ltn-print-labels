@@ -2,6 +2,14 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.8
+
+- Columns now tile the A4 usable width edge to edge: the slider is a
+  TARGET size, the layout picks the nearest whole column count and stretches
+  the label to fill (no leftover side margin). `labelWmm` is derived.
+- Preview page centred with an integer margin instead of flex/`margin:auto`,
+  which parked it on a half-pixel and dropped grid lines.
+
 ## 0.1.7
 
 - Preview cell dimensions rounded to whole pixels. With `gap: 1px` on a

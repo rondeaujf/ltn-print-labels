@@ -45,10 +45,15 @@ export function createLabelPreview(container, students, options = {}) {
     const availH = Number(nextOptions?.maxPreviewHeight) || Infinity;
     const k = Math.min(1, availW / pageWpx, availH / pageHpx);
 
-    page.style.width = `${Math.round(pageWpx * k)}px`;
+    const pageW = Math.round(pageWpx * k);
+    page.style.width = `${pageW}px`;
     page.style.height = `${Math.round(pageHpx * k)}px`;
     page.style.padding = `${Math.round(MARGIN_MM * PX_PER_MM * k)}px`;
     page.style.overflow = "hidden";
+    // Centrage par une marge ENTIÈRE (pas via flex/`margin:auto` qui posent la
+    // page sur une demi-pixel → les filets 1px de la grille sautent).
+    const boxInner = (host.clientWidth || pageW) - 16;
+    page.style.marginLeft = `${Math.max(0, Math.floor((boxInner - pageW) / 2))}px`;
 
     const head = document.createElement("div");
     head.className = "lpl-page__head";

@@ -139,7 +139,7 @@ describe("createLabelPreview", () => {
     });
     const cells = host.querySelectorAll(".lpl-grid .lpl-cell").length;
     expect(cells).toBeGreaterThan(0);
-    expect(cells).toBeLessThanOrEqual(3 * 11); // 3 cols, rowsPerPage portrait 55mm ≈ 10
+    expect(cells).toBeLessThanOrEqual(5 * 12); // <= cols × rowsPerPage d'une page
   });
 
   it("en-tête figuré + variables de taille en px", () => {
