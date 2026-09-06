@@ -2,6 +2,16 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.4
+
+- `computeLabelLayout` returns `rowsPerPage`. `createLabelPreview` now renders
+  only that many rows — one page. Past that the real PDF paginates; the
+  preview no longer runs off the bottom (a big label size that yielded a
+  single very tall column used to overflow endlessly).
+- Each preview cell gets a fixed-height inner box that clips its overflow, so
+  a long or wrapping name can't stretch the row (mirrors mPDF's cell clip).
+- Level line kept at the top-left, name vertically centred in the box.
+
 ## 0.1.3
 
 - `createLabelPreview` accepts `options.maxPreviewWidth` (px). Relying on the

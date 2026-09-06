@@ -110,6 +110,22 @@ describe("computeLabelLayout", () => {
     expect(countNonEmpty(layout)).toBe(40);
   });
 
+  it("expose rowsPerPage (borne d'aperçu = 1 page)", () => {
+    const students = Array.from({ length: 40 }, (_, i) => S(`E${i}`, `N${i}`));
+    const layout = computeLabelLayout(students, { labelMm: 55, orient: "P" });
+    expect(layout.rowsPerPage).toBeGreaterThan(0);
+    // une grande classe déborde : plus de lignes que ce qui tient sur une page
+    expect(layout.rows.length).toBeGreaterThan(layout.rowsPerPage);
+  });
+
+  it("« les deux » réduit la police du prénom (pas celle du niveau)", () => {
+    const s = [S("Léa", "Martin")];
+    const first = computeLabelLayout(s, { labelMm: 55, fields: "first" });
+    const both = computeLabelLayout(s, { labelMm: 55, fields: "both" });
+    expect(both.fontMm).toBeLessThan(first.fontMm);
+    expect(both.levelFontMm).toBeCloseTo(first.levelFontMm, 5);
+  });
+
   it("le paysage élargit la grille", () => {
     const students = [S("Alice", "Abel")];
     expect(

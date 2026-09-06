@@ -124,8 +124,9 @@ export function resolveLabelText(students, fields) {
 /**
  * @param {Array<{firstname?:string,lastname?:string,level?:string}>} students
  * @param {{orient?:"P"|"L",labelMm?:number,fields?:"first"|"last"|"both",showLevel?:boolean}} [options]
- * @returns {{orient:string,cols:number,groupes:number,labelWmm:number,labelHmm:number,
- *   fontMm:number,levelFontMm:number,pageWmm:number,pageHmm:number,
+ * @returns {{orient:string,cols:number,groupes:number,rowsPerPage:number,
+ *   labelWmm:number,labelHmm:number,fontMm:number,levelFontMm:number,
+ *   pageWmm:number,pageHmm:number,
  *   rows:Array<{cells:Array<{name:string,level:string,empty:boolean}>}>}}
  */
 export function computeLabelLayout(students, options = {}) {
@@ -148,8 +149,10 @@ export function computeLabelLayout(students, options = {}) {
     Math.min(maxMm, Math.round(Number(options.labelMm) || 55)),
   );
   const labelHmm = round1(labelWmm * HEIGHT_RATIO);
-  const fontMm = round1(labelWmm * FONT_RATIO);
-  const levelFontMm = round1(fontMm * LEVEL_FONT_RATIO);
+  // « Les deux » = prénom + nom sur l'étiquette : deux mots, il faut une police
+  // plus petite pour qu'ils tiennent (aperçu ET PDF, cf. wire lvl_font_mm).
+  const fontMm = round1(labelWmm * FONT_RATIO * (fields === "both" ? 0.6 : 1));
+  const levelFontMm = round1(labelWmm * FONT_RATIO * LEVEL_FONT_RATIO);
 
   const [pageWmm, pageHmm] = PAGE_MM[orient];
   const usableW = pageWmm - 2 * MARGIN_MM;
@@ -188,6 +191,7 @@ export function computeLabelLayout(students, options = {}) {
     orient,
     cols,
     groupes,
+    rowsPerPage: rowsParPage,
     labelWmm,
     labelHmm,
     fontMm,

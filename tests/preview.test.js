@@ -84,4 +84,31 @@ describe("createLabelPreview", () => {
     });
     expect(w()).toBeLessThanOrEqual(300);
   });
+
+  it("ne rend qu'une page : au plus rowsPerPage lignes, même pour une grande classe", () => {
+    const roster = Array.from({ length: 60 }, (_, i) => S(`E${i}`, `N${i}`));
+    createLabelPreview(host, roster, {
+      labelMm: 55,
+      orient: "P",
+      maxPreviewWidth: 600,
+      maxPreviewHeight: 700,
+    });
+    const trCount = host.querySelectorAll(".lpl-grid tr").length;
+    expect(trCount).toBeGreaterThan(0);
+    expect(trCount).toBeLessThanOrEqual(11); // rowsPerPage portrait 55mm ≈ 10
+  });
+
+  it("chaque case a une boîte de contenu + en-tête figuré + vars de taille", () => {
+    createLabelPreview(host, [S("Léa", "Martin", "CE1")], {
+      labelMm: 55,
+      showLevel: true,
+      maxPreviewWidth: 600,
+    });
+    expect(host.querySelector(".lpl-grid td .lpl-cell__box")).not.toBeNull();
+    expect(host.querySelector(".lpl-page__head")).not.toBeNull();
+    const grid = host.querySelector(".lpl-grid");
+    for (const v of ["--w", "--h", "--f", "--lf"]) {
+      expect(grid.style.getPropertyValue(v)).toMatch(/px$/);
+    }
+  });
 });
