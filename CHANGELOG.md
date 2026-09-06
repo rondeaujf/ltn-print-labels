@@ -2,6 +2,15 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.2
+
+- The level is now a plain in-flow line above the name (small, left-aligned,
+  light grey), instead of an absolutely-positioned corner badge. mPDF (the
+  consumer's server-side PDF renderer) cannot reliably position an element in
+  a cell corner nor resolve `em` font sizes there, so the preview and the PDF
+  drifted apart. `computeLabelLayout` now returns `levelFontMm` (half the name
+  size) so both sides render the level at the exact same absolute size.
+
 ## 0.1.1
 
 - `createLabelPreview` no longer uses `transform: scale()`. Scaling a

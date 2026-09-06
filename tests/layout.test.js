@@ -81,6 +81,7 @@ describe("computeLabelLayout", () => {
     expect(layout.cols).toBe(3);
     expect(layout.labelWmm).toBe(55);
     expect(layout.labelHmm).toBeCloseTo(23.1, 5);
+    expect(layout.levelFontMm).toBeCloseTo(layout.fontMm / 2, 1);
     expect(layout.groupes).toBeGreaterThan(1);
     expect(countNonEmpty(layout)).toBe(3 * layout.groupes);
     // ordre d'entrée préservé (le tri par nom est fait en amont par l'app)

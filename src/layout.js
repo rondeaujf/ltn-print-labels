@@ -22,7 +22,8 @@ const MARGIN_MM = 7; // PDF_MARGIN côté serveur
 const HEADER_FOOTER_MM = 42; // réserve en-tête générique + pied `_footer`
 
 const HEIGHT_RATIO = 0.42; // hauteur d'étiquette = largeur * 0.42
-const FONT_RATIO = 0.24; // corps de police = largeur * 0.24
+const FONT_RATIO = 0.24; // corps de police du prénom = largeur * 0.24
+const LEVEL_FONT_RATIO = 0.5; // corps du niveau = moitié de celui du prénom
 
 function round1(n) {
   return Math.round(n * 10) / 10;
@@ -124,7 +125,8 @@ export function resolveLabelText(students, fields) {
  * @param {Array<{firstname?:string,lastname?:string,level?:string}>} students
  * @param {{orient?:"P"|"L",labelMm?:number,fields?:"first"|"last"|"both",showLevel?:boolean}} [options]
  * @returns {{orient:string,cols:number,groupes:number,labelWmm:number,labelHmm:number,
- *   fontMm:number,pageWmm:number,pageHmm:number,rows:Array<{cells:Array<{name:string,level:string,empty:boolean}>}>}}
+ *   fontMm:number,levelFontMm:number,pageWmm:number,pageHmm:number,
+ *   rows:Array<{cells:Array<{name:string,level:string,empty:boolean}>}>}}
  */
 export function computeLabelLayout(students, options = {}) {
   const list = (Array.isArray(students) ? students : []).filter(
@@ -147,6 +149,7 @@ export function computeLabelLayout(students, options = {}) {
   );
   const labelHmm = round1(labelWmm * HEIGHT_RATIO);
   const fontMm = round1(labelWmm * FONT_RATIO);
+  const levelFontMm = round1(fontMm * LEVEL_FONT_RATIO);
 
   const [pageWmm, pageHmm] = PAGE_MM[orient];
   const usableW = pageWmm - 2 * MARGIN_MM;
@@ -188,6 +191,7 @@ export function computeLabelLayout(students, options = {}) {
     labelWmm,
     labelHmm,
     fontMm,
+    levelFontMm,
     pageWmm,
     pageHmm,
     rows,

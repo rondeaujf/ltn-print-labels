@@ -54,19 +54,25 @@ export function createLabelPreview(container, students, options = {}) {
     grid.style.setProperty("--w", `${layout.labelWmm * PX_PER_MM * k}px`);
     grid.style.setProperty("--h", `${layout.labelHmm * PX_PER_MM * k}px`);
     grid.style.setProperty("--f", `${layout.fontMm * PX_PER_MM * k}px`);
+    grid.style.setProperty("--lf", `${layout.levelFontMm * PX_PER_MM * k}px`);
 
     for (const row of layout.rows) {
       const tr = document.createElement("tr");
       for (const cell of row.cells) {
         const td = document.createElement("td");
         td.className = cell.empty ? "lpl-cell lpl-cell--empty" : "lpl-cell";
+        // Même empilement que le PDF (mustache) : niveau au-dessus, discret et
+        // aligné à gauche ; prénom centré. mPDF ne sait pas incruster en coin.
         if (cell.level) {
-          const lvl = document.createElement("span");
+          const lvl = document.createElement("div");
           lvl.className = "lpl-cell__lvl";
           lvl.textContent = cell.level;
           td.appendChild(lvl);
         }
-        td.appendChild(document.createTextNode(cell.name || ""));
+        const name = document.createElement("div");
+        name.className = "lpl-cell__name";
+        name.textContent = cell.name || "";
+        td.appendChild(name);
         tr.appendChild(td);
       }
       grid.appendChild(tr);
