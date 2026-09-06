@@ -1,75 +1,10 @@
-/* Styles de l'APERÇU uniquement (createLabelPreview). Le PDF final est rendu
-   côté serveur (mustache + mPDF) et n'utilise pas cette feuille. */
+/* Décoration OPTIONNELLE de l'aperçu (createLabelPreview). Tout ce qui porte la
+   mise en page est posé en ligne par preview.js ; cette feuille ne fait
+   qu'habiller le fond. Le PDF final est rendu côté serveur et n'utilise rien
+   d'ici. */
 
 .lpl-preview {
-  /* Bloc (pas flex) : la page est centrée par une marge entière posée en JS,
-     pour que les filets 1px de la grille ne tombent pas sur une demi-pixel. */
-  display: block;
-  overflow: auto;
   box-sizing: border-box;
   padding: 8px;
   background: #e9edf2;
-}
-
-.lpl-page {
-  box-sizing: border-box;
-  overflow: hidden;
-  background: #fff;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
-}
-
-/* Fine bande figurant l'en-tête (école / enseignant / classe). */
-.lpl-page__head {
-  border-bottom: 2px solid #cfd6dd;
-  background: repeating-linear-gradient(
-    180deg,
-    #f4f6f8,
-    #f4f6f8 2px,
-    #fff 2px,
-    #fff 5px
-  );
-}
-
-/* CSS Grid : largeur = cols × --w + filets. Le fond noir + gap 1px dessine les
-   traits de découpe jointifs (pas de double bordure à gérer). */
-.lpl-grid {
-  display: grid;
-  width: max-content;
-  margin: 4px auto 0;
-  padding: 1px;
-  gap: 1px;
-  background: #000;
-}
-
-.lpl-cell {
-  position: relative;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  width: var(--w);
-  height: var(--h);
-  overflow: hidden;
-  padding: 0 2px;
-  background: #fff;
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-}
-
-.lpl-cell--empty {
-  background: #f2f2f2;
-}
-
-.lpl-cell__lvl {
-  font-size: var(--lf);
-  line-height: 1;
-  color: #8a8a8a;
-  text-align: center;
-}
-
-.lpl-cell__name {
-  overflow: hidden;
-  font-size: var(--f);
-  font-weight: 700;
-  line-height: 1.05;
-  text-align: center;
 }

@@ -49,9 +49,10 @@ describe("createLabelPreview", () => {
     const grid = host.querySelector(".lpl-grid");
     expect(grid.tagName).toBe("DIV");
     expect(grid.style.display).toBe("grid");
-    expect(grid.style.gridTemplateColumns).toMatch(
-      /^repeat\(\d+, var\(--w\)\)$/,
-    );
+    // colonnes à pas FIXE en px littéraux (pas de var(--w) qui pourrait ne pas
+    // se résoudre chez le consommateur)
+    expect(grid.style.gridTemplateColumns).toMatch(/^repeat\(\d+, \d+px\)$/);
+    expect(grid.style.gridAutoRows).toMatch(/^\d+px$/);
   });
 
   it("bascule portrait -> paysage par re-render", () => {
@@ -142,16 +143,20 @@ describe("createLabelPreview", () => {
     expect(cells).toBeLessThanOrEqual(5 * 12); // <= cols × rowsPerPage d'une page
   });
 
-  it("en-tête figuré + variables de taille en px", () => {
+  it("styles de mise en page posés EN LIGNE (indépendant de style.css)", () => {
     createLabelPreview(host, [S("Léa", "Martin", "CE1")], {
       labelMm: 55,
       showLevel: true,
       maxPreviewWidth: 600,
     });
-    expect(host.querySelector(".lpl-page__head")).not.toBeNull();
-    const grid = host.querySelector(".lpl-grid");
-    for (const v of ["--w", "--h", "--f", "--lf"]) {
-      expect(grid.style.getPropertyValue(v)).toMatch(/px$/);
-    }
+    expect(host.querySelector(".lpl-page__head").style.height).toMatch(/px$/);
+    const cell = host.querySelector(".lpl-grid .lpl-cell");
+    expect(cell.style.width).toMatch(/^\d+px$/);
+    expect(cell.style.height).toMatch(/^\d+px$/);
+    expect(cell.style.borderTop).toContain("1px");
+    expect(host.querySelector(".lpl-cell__name").style.textAlign).toBe(
+      "center",
+    );
+    expect(host.querySelector(".lpl-cell__lvl").style.color).toBeTruthy();
   });
 });

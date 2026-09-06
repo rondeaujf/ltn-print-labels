@@ -2,6 +2,18 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.9
+
+- Preview is now fully self-styling: every layout-critical rule (cell size,
+  1px borders, grid tracks, fonts) is set inline by preview.js. It was
+  relying on style.css being imported by the consumer and on CSS custom
+  properties resolving; where that did not hold the columns collapsed to
+  content width and the grid lines vanished. style.css is now decoration
+  only.
+- Grid uses fixed `repeat(n, <w>px)` + `grid-auto-rows: <h>px` so every
+  cell is identical; borders are top+left per cell, closed right+bottom on
+  the container (no gap trick).
+
 ## 0.1.8
 
 - Columns now tile the A4 usable width edge to edge: the slider is a
