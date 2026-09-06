@@ -1,17 +1,14 @@
 // Aperçu WYSIWYG : UNE page A4 (portrait ou paysage), rendue à l'échelle réduite
-// en pixels réels — pas de `transform: scale()` (qui, sur un tableau
-// `border-collapse`, fait sauter une bordure 1px sur deux). Le même
-// `computeLabelLayout` qui nourrit le PDF sert ici.
-//
-// L'aperçu ne montre QUE la première page (`rowsPerPage`) : au-delà, le PDF
-// paginerait — inutile de faire déborder l'aperçu. Chaque case a une hauteur
-// fixe et coupe son trop-plein, comme mPDF côté PDF.
+// en pixels réels. Grille en CSS Grid (colonnes `repeat(n, <w>px)`) — largeur
+// parfaitement déterministe, aucun reflow surprise contrairement à un <table>
+// `table-layout:fixed`. Le même `computeLabelLayout` qui nourrit le PDF sert
+// ici ; l'aperçu ne montre que la 1re page (`rowsPerPage`).
 
 import { computeLabelLayout } from "./layout.js";
 
 const PX_PER_MM = 96 / 25.4;
 const MARGIN_MM = 7; // marge d'impression, miroir de layout.js
-const HEADER_MM = 12; // bande figurant l'en-tête générique du site (repère)
+const HEADER_MM = 12; // fine bande figurant l'en-tête générique du site
 
 /**
  * @param {Element|string} container hôte de l'aperçu (vidé et repris en main)
@@ -46,7 +43,6 @@ export function createLabelPreview(container, students, options = {}) {
     const availW =
       Number(nextOptions?.maxPreviewWidth) || host.clientWidth || pageWpx;
     const availH = Number(nextOptions?.maxPreviewHeight) || Infinity;
-    // Réduction pour tenir dans la largeur ET (optionnel) la hauteur dispo.
     const k = Math.min(1, availW / pageWpx, availH / pageHpx);
 
     page.style.width = `${Math.round(pageWpx * k)}px`;
@@ -54,50 +50,41 @@ export function createLabelPreview(container, students, options = {}) {
     page.style.padding = `${MARGIN_MM * PX_PER_MM * k}px`;
     page.style.overflow = "hidden";
 
-    const grid = document.createElement("table");
-    grid.className = "lpl-grid";
-    grid.style.setProperty("--w", `${layout.labelWmm * PX_PER_MM * k}px`);
-    grid.style.setProperty("--h", `${layout.labelHmm * PX_PER_MM * k}px`);
-    grid.style.setProperty("--f", `${layout.fontMm * PX_PER_MM * k}px`);
-    grid.style.setProperty("--lf", `${layout.levelFontMm * PX_PER_MM * k}px`);
-
-    // Bande figurant l'en-tête générique du site (école / enseignant / classe) :
-    // sans elle, la grille flotte dans le vide en haut de page.
     const head = document.createElement("div");
     head.className = "lpl-page__head";
     head.style.height = `${Math.round(HEADER_MM * PX_PER_MM * k)}px`;
 
-    // Une seule page : au-delà de rowsPerPage, le PDF passerait à la page
-    // suivante.
+    const grid = document.createElement("div");
+    grid.className = "lpl-grid";
+    // display + colonnes en ligne : la grille tient même si l'hôte n'a pas
+    // importé style.css.
+    grid.style.display = "grid";
+    grid.style.setProperty("--w", `${layout.labelWmm * PX_PER_MM * k}px`);
+    grid.style.setProperty("--h", `${layout.labelHmm * PX_PER_MM * k}px`);
+    grid.style.setProperty("--f", `${layout.fontMm * PX_PER_MM * k}px`);
+    grid.style.setProperty("--lf", `${layout.levelFontMm * PX_PER_MM * k}px`);
+    grid.style.gridTemplateColumns = `repeat(${layout.cols}, var(--w))`;
+
+    // Une seule page : au-delà, le PDF paginerait.
     const rows = layout.rows.slice(0, layout.rowsPerPage);
-
     for (const row of rows) {
-      const tr = document.createElement("tr");
       for (const cell of row.cells) {
-        const td = document.createElement("td");
-        td.className = cell.empty ? "lpl-cell lpl-cell--empty" : "lpl-cell";
-
-        // Boîte à hauteur fixe qui coupe le trop-plein (le <td> seul ne fait
-        // que grandir avec son contenu). Même empilement que le PDF : niveau
-        // discret aligné à gauche, prénom centré.
-        const box = document.createElement("div");
-        box.className = "lpl-cell__box";
+        const c = document.createElement("div");
+        c.className = cell.empty ? "lpl-cell lpl-cell--empty" : "lpl-cell";
         if (cell.level) {
           const lvl = document.createElement("div");
           lvl.className = "lpl-cell__lvl";
           lvl.textContent = cell.level;
-          box.appendChild(lvl);
+          c.appendChild(lvl);
         }
         const name = document.createElement("div");
         name.className = "lpl-cell__name";
         name.textContent = cell.name || "";
-        box.appendChild(name);
-
-        td.appendChild(box);
-        tr.appendChild(td);
+        c.appendChild(name);
+        grid.appendChild(c);
       }
-      grid.appendChild(tr);
     }
+
     page.replaceChildren(head, grid);
   }
 

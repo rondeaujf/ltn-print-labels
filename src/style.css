@@ -18,58 +18,52 @@
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
 }
 
-/* Bande d'en-tête (école / enseignant / classe) juste figurée. */
+/* Fine bande figurant l'en-tête (école / enseignant / classe). */
 .lpl-page__head {
   border-bottom: 2px solid #cfd6dd;
   background: repeating-linear-gradient(
     180deg,
     #f4f6f8,
-    #f4f6f8 3px,
-    #fff 3px,
-    #fff 8px
+    #f4f6f8 2px,
+    #fff 2px,
+    #fff 5px
   );
 }
 
+/* CSS Grid : largeur = cols × --w + filets. Le fond noir + gap 1px dessine les
+   traits de découpe jointifs (pas de double bordure à gérer). */
 .lpl-grid {
-  border-collapse: collapse;
-  table-layout: fixed;
-  margin: 0 auto;
+  display: grid;
+  width: max-content;
+  margin: 4px auto 0;
+  padding: 1px;
+  gap: 1px;
+  background: #000;
 }
 
-.lpl-grid td {
-  width: var(--w);
-  height: var(--h);
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid #000;
-  vertical-align: top;
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-}
-
-.lpl-grid td.lpl-cell--empty {
-  border-color: #b0b0b0;
-}
-
-/* Le <td> ne fait que grandir avec son contenu : cette boîte impose la hauteur
-   exacte de l'étiquette et coupe le trop-plein (comme overflow:hidden sur la
-   cellule côté mPDF). */
-.lpl-cell__box {
+.lpl-cell {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  width: var(--w);
   height: var(--h);
   overflow: hidden;
   padding: 0 2px;
+  background: #fff;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+.lpl-cell--empty {
+  background: #f2f2f2;
 }
 
 .lpl-cell__lvl {
-  flex: none;
   font-size: var(--lf);
-  font-weight: 400;
-  line-height: 1.1;
+  line-height: 1;
   color: #8a8a8a;
-  text-align: left;
+  text-align: center;
 }
 
 .lpl-cell__name {

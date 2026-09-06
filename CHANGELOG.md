@@ -2,6 +2,17 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.6
+
+- Preview grid rebuilt on **CSS Grid** (`grid-template-columns: repeat(n,
+<w>px)`) instead of a `<table>`. A `table-layout:fixed` table kept
+  reflowing on successive `update()` calls (orientation / size / name mode)
+  and the grid drifted off the page. The grid width is now exact and every
+  re-render is stable.
+- Level is a small grey line centred just above the name, in the preview and
+  in the PDF template — the same, tight, no white gaps. (The top-left corner
+  badge was dropped: mPDF cannot place it there.)
+
 ## 0.1.5
 
 - Preview header band cut from 34 mm to 12 mm — it is only a marker, it was
