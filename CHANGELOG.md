@@ -2,6 +2,11 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.5
+
+- Preview header band cut from 34 mm to 12 mm — it is only a marker, it was
+  eating two-thirds of the page.
+
 ## 0.1.4
 
 - `computeLabelLayout` returns `rowsPerPage`. `createLabelPreview` now renders

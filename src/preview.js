@@ -11,7 +11,7 @@ import { computeLabelLayout } from "./layout.js";
 
 const PX_PER_MM = 96 / 25.4;
 const MARGIN_MM = 7; // marge d'impression, miroir de layout.js
-const HEADER_MM = 34; // bande d'en-tête générique du site, figurée dans l'aperçu
+const HEADER_MM = 12; // bande figurant l'en-tête générique du site (repère)
 
 /**
  * @param {Element|string} container hôte de l'aperçu (vidé et repris en main)
