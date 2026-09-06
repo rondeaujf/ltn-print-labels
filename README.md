@@ -41,16 +41,15 @@ const options = {
   orient: "P", // "P" | "L"
   labelMm: 55, // label width in mm (clamped: 30–120 portrait, 30–260 landscape)
   fields: "first", // "first" | "last" | "both"
-  showLevel: true, // print the level in the label's top-left corner
+  showLevel: true, // show the level as a light line above the name
 };
 
-// Live preview inside a dialog. `maxPreviewHeight` (px, preview only — ignored
-// by computeLabelLayout) scales the sheet down so the WHOLE page stays visible.
-const preview = createLabelPreview("#preview", roster, {
-  ...options,
-  maxPreviewHeight: 520,
-});
-preview.update(roster, { ...options, orient: "L", maxPreviewHeight: 520 });
+// Live preview inside a dialog. `maxPreviewWidth` / `maxPreviewHeight` (px,
+// preview only — ignored by computeLabelLayout) fix the target size so the
+// sheet is deterministic on every re-render and the whole page stays visible.
+const dims = { maxPreviewWidth: 780, maxPreviewHeight: 520 };
+const preview = createLabelPreview("#preview", roster, { ...options, ...dims });
+preview.update(roster, { ...options, orient: "L", ...dims });
 preview.destroy();
 
 // Layout model — hand this to your PDF renderer.

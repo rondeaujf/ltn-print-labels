@@ -2,6 +2,16 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.3
+
+- `createLabelPreview` accepts `options.maxPreviewWidth` (px). Relying on the
+  host element's `clientWidth` alone broke every re-render (orientation
+  toggle, size, name mode) when the host sizes itself to its content — the
+  page fed its own width back in and the layout blew up. Pass an explicit
+  width and each render is deterministic.
+- Level line forced to full cell width so `text-align: left` actually
+  left-aligns it (mPDF was centring it).
+
 ## 0.1.2
 
 - The level is now a plain in-flow line above the name (small, left-aligned,

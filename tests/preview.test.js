@@ -66,4 +66,22 @@ describe("createLabelPreview", () => {
       parseFloat(host.querySelector(".lpl-page").style.height),
     ).toBeLessThanOrEqual(400);
   });
+
+  it("maxPreviewWidth pilote la largeur sans dépendre du conteneur", () => {
+    // clientWidth de l'hôte = 600 (beforeEach) ; on impose 300.
+    const preview = createLabelPreview(host, [S("Léa", "Martin")], {
+      labelMm: 55,
+      orient: "P",
+      maxPreviewWidth: 300,
+    });
+    const w = () => parseFloat(host.querySelector(".lpl-page").style.width);
+    expect(w()).toBeLessThanOrEqual(300);
+    // Re-render : reste stable, ne "gonfle" pas.
+    preview.update(undefined, {
+      labelMm: 55,
+      orient: "L",
+      maxPreviewWidth: 300,
+    });
+    expect(w()).toBeLessThanOrEqual(300);
+  });
 });

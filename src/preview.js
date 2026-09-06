@@ -39,7 +39,11 @@ export function createLabelPreview(container, students, options = {}) {
 
     const pageWpx = layout.pageWmm * PX_PER_MM;
     const pageHpx = layout.pageHmm * PX_PER_MM;
-    const availW = host.clientWidth || pageWpx;
+    // Largeur cible : `maxPreviewWidth` explicite en priorité. `host.clientWidth`
+    // seul est piégeux quand l'hôte se dimensionne sur son contenu (dialog en
+    // width:auto) — chaque re-render le relit et l'aperçu part en vrille.
+    const availW =
+      Number(nextOptions?.maxPreviewWidth) || host.clientWidth || pageWpx;
     const availH = Number(nextOptions?.maxPreviewHeight) || Infinity;
     // Réduction pour tenir dans la largeur du dialog ET (optionnel) sa hauteur :
     // on voit toujours la feuille entière.

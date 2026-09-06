@@ -41,6 +41,8 @@
 }
 
 .lpl-cell__lvl {
+  display: block;
+  width: 100%;
   font-size: var(--lf);
   font-weight: 400;
   color: #8a8a8a;
