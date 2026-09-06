@@ -2,6 +2,12 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.7
+
+- Preview cell dimensions rounded to whole pixels. With `gap: 1px` on a
+  grid whose cells fell on sub-pixel boundaries, the browser dropped every
+  other 1px cut line.
+
 ## 0.1.6
 
 - Preview grid rebuilt on **CSS Grid** (`grid-template-columns: repeat(n,

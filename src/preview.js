@@ -47,22 +47,34 @@ export function createLabelPreview(container, students, options = {}) {
 
     page.style.width = `${Math.round(pageWpx * k)}px`;
     page.style.height = `${Math.round(pageHpx * k)}px`;
-    page.style.padding = `${MARGIN_MM * PX_PER_MM * k}px`;
+    page.style.padding = `${Math.round(MARGIN_MM * PX_PER_MM * k)}px`;
     page.style.overflow = "hidden";
 
     const head = document.createElement("div");
     head.className = "lpl-page__head";
     head.style.height = `${Math.round(HEADER_MM * PX_PER_MM * k)}px`;
 
+    // Dimensions de case ARRONDIES au pixel entier : avec `gap: 1px` sur une
+    // grille dont les cases tomberaient sur des fractions de pixel, le
+    // navigateur laisse disparaître une ligne de découpe sur deux.
+    const cw = Math.round(layout.labelWmm * PX_PER_MM * k);
+    const ch = Math.round(layout.labelHmm * PX_PER_MM * k);
+
     const grid = document.createElement("div");
     grid.className = "lpl-grid";
     // display + colonnes en ligne : la grille tient même si l'hôte n'a pas
     // importé style.css.
     grid.style.display = "grid";
-    grid.style.setProperty("--w", `${layout.labelWmm * PX_PER_MM * k}px`);
-    grid.style.setProperty("--h", `${layout.labelHmm * PX_PER_MM * k}px`);
-    grid.style.setProperty("--f", `${layout.fontMm * PX_PER_MM * k}px`);
-    grid.style.setProperty("--lf", `${layout.levelFontMm * PX_PER_MM * k}px`);
+    grid.style.setProperty("--w", `${cw}px`);
+    grid.style.setProperty("--h", `${ch}px`);
+    grid.style.setProperty(
+      "--f",
+      `${Math.round(layout.fontMm * PX_PER_MM * k)}px`,
+    );
+    grid.style.setProperty(
+      "--lf",
+      `${Math.round(layout.levelFontMm * PX_PER_MM * k)}px`,
+    );
     grid.style.gridTemplateColumns = `repeat(${layout.cols}, var(--w))`;
 
     // Une seule page : au-delà, le PDF paginerait.
