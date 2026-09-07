@@ -67,7 +67,14 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
 
+      # Diagnostic OIDC : sans `id-token: write` effectif, cette URL est
+      # absente et npm ne peut pas tenter le Trusted Publishing.
+      - name: OIDC disponible ?
+        run: |
+          echo "npm $(npm --version)"
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL: ${ACTIONS_ID_TOKEN_REQUEST_URL:+présente}"
+
       # --ignore-scripts : l'étape qui détient le droit de publier n'exécute
       # AUCUN script de cycle de vie (les vérifications viennent d'être jouées
       # ci-dessus). Authentification par OIDC, provenance générée d'office.
-      - run: npm publish --ignore-scripts
+      - run: npm publish --ignore-scripts --loglevel http
