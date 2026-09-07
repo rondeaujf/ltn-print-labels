@@ -44,42 +44,79 @@ export function createLabelPreview(container, students, options = {}) {
 
     const pageWpx = layout.pageWmm * PX_PER_MM;
     const pageHpx = layout.pageHmm * PX_PER_MM;
-    const availW =
-      Number(nextOptions?.maxPreviewWidth) || host.clientWidth || pageWpx;
+    // clientWidth inclut le padding de l'hôte (8px de style.css quand elle est
+    // chargée) : on le retranche, sinon la page déborde de l'hôte.
+    const hostCS = host.ownerDocument?.defaultView?.getComputedStyle?.(host);
+    const hostPadX = hostCS
+      ? (parseFloat(hostCS.paddingLeft) || 0) +
+        (parseFloat(hostCS.paddingRight) || 0)
+      : 0;
+    const hostW = Math.max(0, (host.clientWidth || 0) - hostPadX);
+    const availW = Number(nextOptions?.maxPreviewWidth) || hostW || pageWpx;
     const availH = Number(nextOptions?.maxPreviewHeight) || Infinity;
     const k = Math.min(1, availW / pageWpx, availH / pageHpx);
 
     const pageW = Math.round(pageWpx * k);
+    const pageH = Math.round(pageHpx * k);
     const pad = Math.round(MARGIN_MM * PX_PER_MM * k);
     page.style.cssText =
-      `box-sizing:border-box;width:${pageW}px;height:${Math.round(pageHpx * k)}px;` +
+      `box-sizing:border-box;width:${pageW}px;height:${pageH}px;` +
       `padding:${pad}px;overflow:hidden;background:#fff;` +
       `box-shadow:0 1px 6px rgba(0,0,0,.25);`;
     // Centrage par une marge ENTIÈRE (pas via flex/`margin:auto` qui posent la
     // page sur une demi-pixel → les filets 1px de la grille sautent).
-    const boxInner = (host.clientWidth || pageW) - 16;
+    const boxInner = hostW || pageW;
     page.style.marginLeft = `${Math.max(0, Math.floor((boxInner - pageW) / 2))}px`;
+
+    // Boîte intérieure RÉELLE de la page (après les arrondis ci-dessus) : c'est
+    // elle qui fait foi, pas une reconversion mm→px qui peut arrondir au-dessus
+    // et faire rogner le filet droit par `overflow:hidden`.
+    const innerW = pageW - 2 * pad;
+    const innerH = pageH - 2 * pad;
+    const headH = Math.round(HEADER_MM * PX_PER_MM * k);
+    const gridGapTop = 4; // marge au-dessus de la grille
 
     // Dimensions ENTIÈRES : sur une grille dont les cases tomberaient sur des
     // fractions de pixel, le navigateur laisse disparaître un filet sur deux.
-    const cw = Math.round(layout.labelWmm * PX_PER_MM * k);
-    const ch = Math.round(layout.labelHmm * PX_PER_MM * k);
-    const cf = Math.round(layout.fontMm * PX_PER_MM * k);
-    const clf = Math.round(layout.levelFontMm * PX_PER_MM * k);
+    // La largeur de case PAVE la boîte intérieure (comme le PDF pave la largeur
+    // utile de l'A4) : cols·cw + 1px de fermeture ≤ innerW, par construction.
+    const cw = Math.max(1, Math.floor((innerW - 1) / layout.cols));
+    // Hauteur proportionnelle à la case réellement rendue, bornée pour que
+    // en-tête + marge + lignes + filet bas tiennent dans la page.
+    const gridMaxH = innerH - (headH + 1) - gridGapTop - 1;
+    const rowsShown = Math.min(layout.rows.length, layout.rowsPerPage);
+    const ch = Math.max(
+      1,
+      Math.min(
+        Math.round((cw * layout.labelHmm) / layout.labelWmm),
+        Math.floor(gridMaxH / Math.max(1, rowsShown)),
+      ),
+    );
+    const cf = Math.max(1, Math.round((cw * layout.fontMm) / layout.labelWmm));
+    const clf = Math.max(
+      1,
+      Math.round((cw * layout.levelFontMm) / layout.labelWmm),
+    );
 
     const head = document.createElement("div");
     head.className = "lpl-page__head";
     head.style.cssText =
-      `height:${Math.round(HEADER_MM * PX_PER_MM * k)}px;` +
+      `height:${headH}px;` +
       `border-bottom:1px solid #c9d2db;background:#f3f6f9;`;
 
     // Filets jointifs sans <table> ni astuce de fond : chaque case porte ses
-    // bordures HAUT + GAUCHE, la grille ferme à DROITE + BAS.
+    // bordures HAUT + GAUCHE, la grille ferme à DROITE + BAS. Centrage par une
+    // marge gauche ENTIÈRE : `margin:auto` poserait la grille sur une
+    // demi-pixel quand (innerW − largeur de grille) est impair, et les filets
+    // verticaux de 1px disparaîtraient.
+    const gridW = layout.cols * cw + 1;
+    const gridML = Math.max(0, Math.floor((innerW - gridW) / 2));
     const grid = document.createElement("div");
     grid.className = "lpl-grid";
     grid.style.cssText =
       `display:grid;grid-template-columns:repeat(${layout.cols}, ${cw}px);` +
-      `grid-auto-rows:${ch}px;width:max-content;margin:4px auto 0;` +
+      `grid-auto-rows:${ch}px;width:max-content;` +
+      `margin:${gridGapTop}px 0 0 ${gridML}px;` +
       `border-right:1px solid #000;border-bottom:1px solid #000;`;
 
     const rows = layout.rows.slice(0, layout.rowsPerPage);
@@ -95,9 +132,13 @@ export function createLabelPreview(container, students, options = {}) {
           `font-family:${FONT_STACK};`;
 
         if (cell.level) {
+          // Niveau ALIGNÉ À GAUCHE (le prénom reste centré). Côté PDF, mPDF ne
+          // sait pas aligner autrement un bloc DANS une case qu'en passant par
+          // une table imbriquée dont le td porte text-align:left — l'aperçu
+          // reflète ce rendu-là (cf. etiquettes_pdf.mustache du consommateur).
           const lvl = document.createElement("div");
           lvl.className = "lpl-cell__lvl";
-          lvl.style.cssText = `font:400 ${clf}px/1 ${FONT_STACK};color:#8a8a8a;text-align:center;`;
+          lvl.style.cssText = `font:400 ${clf}px/1 ${FONT_STACK};color:#8a8a8a;text-align:left;`;
           lvl.textContent = cell.level;
           c.appendChild(lvl);
         }

@@ -95,12 +95,19 @@ describe("createLabelPreview", () => {
     expect(parseFloat(page.style.height)).toBeLessThanOrEqual(400);
   });
 
-  it("affiche le niveau quand showLevel est vrai", () => {
+  it("affiche le niveau quand showLevel est vrai, aligné à GAUCHE", () => {
     createLabelPreview(host, [S("Léa", "Martin", "CE1")], {
       labelMm: 55,
       showLevel: true,
     });
-    expect(host.querySelector(".lpl-cell__lvl")?.textContent).toBe("CE1");
+    const lvl = host.querySelector(".lpl-cell__lvl");
+    expect(lvl?.textContent).toBe("CE1");
+    // Le niveau est à gauche, le prénom reste centré (miroir du PDF : table
+    // imbriquée mPDF dont le td niveau porte text-align:left).
+    expect(lvl.style.textAlign).toBe("left");
+    expect(host.querySelector(".lpl-cell__name").style.textAlign).toBe(
+      "center",
+    );
   });
 
   it("maxPreviewHeight réduit la feuille pour la garder entière", () => {
@@ -141,6 +148,79 @@ describe("createLabelPreview", () => {
     const cells = host.querySelectorAll(".lpl-grid .lpl-cell").length;
     expect(cells).toBeGreaterThan(0);
     expect(cells).toBeLessThanOrEqual(5 * 12); // <= cols × rowsPerPage d'une page
+  });
+
+  // Géométrie lue depuis les styles en ligne : la grille (colonnes + filet de
+  // fermeture droit) doit tenir dans la boîte intérieure de la page, sinon
+  // `overflow:hidden` rogne le filet droit (bordures « qui disparaissent »).
+  function fits(host) {
+    const page = host.querySelector(".lpl-page");
+    const grid = host.querySelector(".lpl-grid");
+    const cell = host.querySelector(".lpl-cell");
+    const innerW =
+      parseFloat(page.style.width) - 2 * parseFloat(page.style.padding);
+    const cols = Number(
+      grid.style.gridTemplateColumns.match(/^repeat\((\d+)/)[1],
+    );
+    const gridW = cols * parseFloat(cell.style.width) + 1; // +1 : border-right
+    return { innerW, gridW, cols };
+  }
+
+  it("la grille ne déborde JAMAIS de la page, quel que soit l'arrondi", () => {
+    const roster = Array.from({ length: 24 }, (_, i) => S(`E${i}`, `N${i}`));
+    const p = createLabelPreview(host, roster, {
+      labelMm: 55,
+      orient: "P",
+      maxPreviewWidth: 397,
+    });
+    // Balayage de tailles/largeurs : chaque combinaison d'arrondis doit tenir.
+    for (const orient of ["P", "L"]) {
+      for (const labelMm of [30, 40, 55, 70, 90, 120]) {
+        for (const maxPreviewWidth of [280, 397, 476, 555, 600]) {
+          p.update(roster, { orient, labelMm, maxPreviewWidth });
+          const { innerW, gridW } = fits(host);
+          expect(
+            gridW,
+            `orient=${orient} labelMm=${labelMm} w=${maxPreviewWidth}`,
+          ).toBeLessThanOrEqual(innerW);
+        }
+      }
+    }
+  });
+
+  it("grille tenant aussi en HAUTEUR (en-tête + marge + filet de fermeture)", () => {
+    const roster = Array.from({ length: 60 }, (_, i) => S(`E${i}`, `N${i}`));
+    createLabelPreview(host, roster, {
+      labelMm: 30,
+      orient: "P",
+      maxPreviewWidth: 397,
+    });
+    const page = host.querySelector(".lpl-page");
+    const head = host.querySelector(".lpl-page__head");
+    const cell = host.querySelector(".lpl-cell");
+    const cells = host.querySelectorAll(".lpl-grid .lpl-cell").length;
+    const { cols } = fits(host);
+    const rows = cells / cols;
+    const innerH =
+      parseFloat(page.style.height) - 2 * parseFloat(page.style.padding);
+    const used =
+      parseFloat(head.style.height) +
+      1 +
+      4 +
+      rows * parseFloat(cell.style.height) +
+      1;
+    expect(used).toBeLessThanOrEqual(innerH);
+  });
+
+  it("centrage de la grille par marge ENTIÈRE (pas de margin:auto demi-pixel)", () => {
+    createLabelPreview(host, [S("Léa", "Martin")], {
+      labelMm: 55,
+      orient: "P",
+      maxPreviewWidth: 600,
+    });
+    const grid = host.querySelector(".lpl-grid");
+    expect(grid.style.marginLeft).toMatch(/^\d+px$/);
+    expect(grid.style.marginRight).not.toBe("auto");
   });
 
   it("styles de mise en page posés EN LIGNE (indépendant de style.css)", () => {
