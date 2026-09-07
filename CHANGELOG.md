@@ -2,6 +2,25 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.10
+
+- Preview cell width is now derived from the page's REAL inner pixel box
+  (`floor((innerW − 1) / cols)`, tiling it like the PDF tiles the A4 usable
+  width) instead of re-converting `labelWmm` to px. The old rounding could
+  come out a few px too wide, the grid spilled past the page margins and
+  `overflow:hidden` clipped the right cut line — the "disappearing borders /
+  grid wider than the sheet" bug that came and went with every size change.
+  Row height is capped the same way so header + grid + closing border always
+  fit the page height.
+- Grid centred inside the page with an integer left margin. The 0.1.9
+  rewrite used `margin: auto`, which parks the grid on a half-pixel whenever
+  the leftover space is odd and makes the browser drop 1px vertical lines
+  (the exact half-pixel bug 0.1.8 had fixed for the page itself).
+- Host width now excludes the host's own padding (`clientWidth` includes
+  it), so the sheet no longer overflows the preview box when style.css is
+  loaded. Fonts scale with the actually-rendered cell width.
+- Output (`computeLabelLayout`, consumed by the PDF) is untouched.
+
 ## 0.1.9
 
 - Preview is now fully self-styling: every layout-critical rule (cell size,
