@@ -35,10 +35,14 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
+      # PAS de `registry-url` ici : setup-node écrirait alors un .npmrc avec un
+      # `_authToken` placeholder (XXXXX-…) que npm utiliserait AU LIEU de
+      # tenter l'échange OIDC → 404 du registre. Sans config d'auth, npm vise
+      # registry.npmjs.org par défaut et bascule de lui-même sur le Trusted
+      # Publishing quand il tourne dans GitHub Actions.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: npm
 
       # Le Trusted Publishing exige npm ≥ 11.5.1 (Node 22 embarque npm 10).
@@ -63,7 +67,14 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
 
+      # Diagnostic OIDC : sans `id-token: write` effectif, cette URL est
+      # absente et npm ne peut pas tenter le Trusted Publishing.
+      - name: OIDC disponible ?
+        run: |
+          echo "npm $(npm --version)"
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL: ${ACTIONS_ID_TOKEN_REQUEST_URL:+présente}"
+
       # --ignore-scripts : l'étape qui détient le droit de publier n'exécute
       # AUCUN script de cycle de vie (les vérifications viennent d'être jouées
       # ci-dessus). Authentification par OIDC, provenance générée d'office.
-      - run: npm publish --ignore-scripts
+      - run: npm publish --ignore-scripts --loglevel http
