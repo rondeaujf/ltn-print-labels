@@ -1,12 +1,23 @@
 # Publication sur npm au push d'un tag `vX.Y.Z` (ou à la main via l'onglet
-# Actions). Prérequis UNIQUE : un token npm « Automation » enregistré comme
-# secret `NPM_TOKEN` du dépôt (Settings → Secrets and variables → Actions).
+# Actions), par TRUSTED PUBLISHING (OIDC) : AUCUN token npm stocké — rien à
+# voler. Prérequis UNIQUE, une fois : sur npmjs.com, page du paquet
+# ltn-print-labels → Settings → Trusted Publisher → GitHub Actions, avec
+# repository `rondeaujf/ltn-print-labels` et workflow `npm-publish.yml`.
+# (La toute première publication du paquet, si elle n'existe pas encore sur le
+# registre, doit se faire en local : le Trusted Publisher se déclare sur un
+# paquet existant.)
+#
+# Durcissements délibérés :
+#  - actions épinglées par SHA de commit (un tag v4 peut être déplacé) ;
+#  - tests/lint/format joués en étapes séparées puis `npm publish
+#    --ignore-scripts` : aucun code de dépendance ne s'exécute pendant l'étape
+#    qui détient le droit de publier ;
+#  - `permissions` minimal, `id-token: write` ne sert qu'à l'OIDC/provenance.
 #
 # Flux de release :
 #   1. bump `version` dans package.json + entrée CHANGELOG, merge sur main ;
-#   2. `git tag v0.1.11 && git push origin v0.1.11` — le workflow vérifie que
-#      le tag correspond à la version, joue prepublishOnly (tests + lint +
-#      format) via `npm publish`, et publie avec provenance (dépôt public).
+#   2. `git tag v0.1.11 && git push origin v0.1.11` — le workflow refuse un
+#      tag qui ne correspond pas à la version du package.json.
 name: Publier sur npm
 
 on:
@@ -16,19 +27,22 @@ on:
 
 permissions:
   contents: read
-  id-token: write # provenance npm (attestation Sigstore du build)
+  id-token: write # OIDC Trusted Publishing + attestation de provenance
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
           cache: npm
+
+      # Le Trusted Publishing exige npm ≥ 11.5.1 (Node 22 embarque npm 10).
+      - run: npm install -g npm@latest
 
       # Un tag v0.1.11 qui publierait le package.json en 0.1.10 = erreur
       # d'étourderie classique ; on refuse avant de toucher au registre.
@@ -43,8 +57,13 @@ jobs:
 
       - run: npm ci
 
-      # prepublishOnly (npm test && lint && format:check) est joué par npm
-      # publish lui-même : une suite rouge bloque la publication.
-      - run: npm publish --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Les garde-fous de prepublishOnly, joués explicitement ici : la
+      # publication elle-même passera --ignore-scripts.
+      - run: npm test
+      - run: npm run lint
+      - run: npm run format:check
+
+      # --ignore-scripts : l'étape qui détient le droit de publier n'exécute
+      # AUCUN script de cycle de vie (les vérifications viennent d'être jouées
+      # ci-dessus). Authentification par OIDC, provenance générée d'office.
+      - run: npm publish --ignore-scripts
