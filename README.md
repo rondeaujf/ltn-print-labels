@@ -54,8 +54,12 @@ preview.destroy();
 
 // Layout model — hand this to your PDF renderer.
 const layout = computeLabelLayout(roster, options);
-// { orient, cols, groupes, labelWmm, labelHmm, fontMm, pageWmm, pageHmm,
+// { orient, cols, groupes, labelWmm, labelHmm, fontMm, levelFontMm,
+//   levelRowMm, pageWmm, pageHmm,
 //   rows: [{ cells: [{ name, level, empty }, ...] }, ...] }
+// `levelRowMm`: fixed-height band reserved at the top of every cell for the
+// level badge (pinned top-left, same place on every label, independent of
+// any student's name or level text — see `showLevel`).
 ```
 
 ## API

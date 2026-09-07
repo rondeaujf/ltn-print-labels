@@ -97,6 +97,13 @@ export function createLabelPreview(container, students, options = {}) {
       1,
       Math.round((cw * layout.levelFontMm) / layout.labelWmm),
     );
+    // Même base d'échelle (cw/labelWmm) que cf/clf : la bande de niveau reste
+    // proportionnée à la police qu'elle contient quels que soient les
+    // arrondis indépendants de ch (hauteur de ligne, bornée pour la page).
+    const clRow = Math.max(
+      1,
+      Math.round((cw * layout.levelRowMm) / layout.labelWmm),
+    );
 
     const head = document.createElement("div");
     head.className = "lpl-page__head";
@@ -127,26 +134,40 @@ export function createLabelPreview(container, students, options = {}) {
         c.style.cssText =
           `box-sizing:border-box;width:${cw}px;height:${ch}px;overflow:hidden;` +
           `border-top:1px solid #000;border-left:1px solid #000;` +
-          `display:flex;flex-direction:column;justify-content:center;` +
+          `display:flex;flex-direction:column;` +
           `padding:0 2px;background:${cell.empty ? "#f2f2f2" : "#fff"};` +
           `font-family:${FONT_STACK};`;
 
-        if (cell.level) {
-          // Niveau ALIGNÉ À GAUCHE (le prénom reste centré). Côté PDF, mPDF ne
-          // sait pas aligner autrement un bloc DANS une case qu'en passant par
-          // une table imbriquée dont le td porte text-align:left — l'aperçu
-          // reflète ce rendu-là (cf. etiquettes_pdf.mustache du consommateur).
+        // Le niveau est gaté sur l'OPTION globale showLevel, jamais sur le
+        // contenu de cell.level : la bande est ainsi réservée à hauteur FIXE
+        // sur TOUTE la planche, qu'un élève ait ou non un niveau renseigné —
+        // le badge reste toujours en haut à gauche, au même endroit, et le
+        // prénom centré dans le reste de la case ne bouge jamais avec lui.
+        // Miroir du PDF : mPDF ne peut épingler un bloc en coin QUE via une
+        // ligne de table à hauteur fixe (jamais position:absolute dans une
+        // cellule) — cf. etiquettes_pdf.mustache du consommateur.
+        if (nextOptions?.showLevel) {
           const lvl = document.createElement("div");
           lvl.className = "lpl-cell__lvl";
-          lvl.style.cssText = `font:400 ${clf}px/1 ${FONT_STACK};color:#8a8a8a;text-align:left;`;
-          lvl.textContent = cell.level;
+          lvl.style.cssText =
+            `flex:0 0 ${clRow}px;height:${clRow}px;overflow:hidden;` +
+            `font:400 ${clf}px/1 ${FONT_STACK};color:#8a8a8a;text-align:left;`;
+          lvl.textContent = cell.level || "";
           c.appendChild(lvl);
         }
+
+        // Le prénom occupe tout le reste de la case et y reste centré, quelle
+        // que soit la hauteur de la bande de niveau au-dessus.
+        const nameWrap = document.createElement("div");
+        nameWrap.style.cssText =
+          `flex:1 1 auto;min-height:0;overflow:hidden;` +
+          `display:flex;align-items:center;justify-content:center;`;
         const name = document.createElement("div");
         name.className = "lpl-cell__name";
-        name.style.cssText = `font:700 ${cf}px/1.05 ${FONT_STACK};text-align:center;overflow:hidden;`;
+        name.style.cssText = `font:700 ${cf}px/1.05 ${FONT_STACK};text-align:center;overflow:hidden;width:100%;`;
         name.textContent = cell.name || "";
-        c.appendChild(name);
+        nameWrap.appendChild(name);
+        c.appendChild(nameWrap);
 
         grid.appendChild(c);
       }

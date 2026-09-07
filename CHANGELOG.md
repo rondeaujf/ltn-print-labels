@@ -2,6 +2,20 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.12
+
+- The level badge is now a truly PINNED top-left corner mark: `layout.levelRowMm`
+  is a new, fixed-height band derived only from `levelFontMm` (never from any
+  student's name or level text), reserved at the top of every cell whenever
+  `showLevel` is on — even for a student with no level at all. The name fills
+  the remaining height and stays centred there. Previously the level line and
+  the name were centred together as one block, so the level's vertical
+  position (and the name's) shifted depending on whether that particular
+  student had a level and on line-wrapping. Now every label on the sheet has
+  the badge slot in the exact same place, matching the printed sheet's
+  original WYSIWYG intent. `computeLabelLayout`'s new `levelRowMm` field is
+  the single source of truth both the preview and the PDF template consume.
+
 ## 0.1.11
 
 - Level line is LEFT-aligned again (the name stays centred). The original

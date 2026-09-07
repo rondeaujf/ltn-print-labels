@@ -24,6 +24,12 @@ const HEADER_FOOTER_MM = 42; // réserve en-tête générique + pied `_footer`
 const HEIGHT_RATIO = 0.42; // hauteur d'étiquette = largeur * 0.42
 const FONT_RATIO = 0.24; // corps de police du prénom = largeur * 0.24
 const LEVEL_FONT_RATIO = 0.5; // corps du niveau = moitié de celui du prénom
+// Bande NIVEAU : hauteur RÉSERVÉE en haut de l'étiquette, fixe, dérivée
+// uniquement de levelFontMm (donc de labelWmm) — jamais du texte d'un élève
+// en particulier. Le prénom occupe tout le reste de l'étiquette. C'est ce qui
+// garantit un badge de niveau toujours à la même place, quels que soient le
+// nom ou la présence/absence de niveau d'un élève donné.
+const LEVEL_ROW_RATIO = 1.3;
 
 function round1(n) {
   return Math.round(n * 10) / 10;
@@ -126,7 +132,7 @@ export function resolveLabelText(students, fields) {
  * @param {{orient?:"P"|"L",labelMm?:number,fields?:"first"|"last"|"both",showLevel?:boolean}} [options]
  * @returns {{orient:string,cols:number,groupes:number,rowsPerPage:number,
  *   labelWmm:number,labelHmm:number,fontMm:number,levelFontMm:number,
- *   pageWmm:number,pageHmm:number,
+ *   levelRowMm:number,pageWmm:number,pageHmm:number,
  *   rows:Array<{cells:Array<{name:string,level:string,empty:boolean}>}>}}
  */
 export function computeLabelLayout(students, options = {}) {
@@ -163,6 +169,7 @@ export function computeLabelLayout(students, options = {}) {
   // plus petite pour qu'ils tiennent (aperçu ET PDF, cf. wire lvl_font_mm).
   const fontMm = round1(labelWmm * FONT_RATIO * (fields === "both" ? 0.6 : 1));
   const levelFontMm = round1(labelWmm * FONT_RATIO * LEVEL_FONT_RATIO);
+  const levelRowMm = round1(levelFontMm * LEVEL_ROW_RATIO);
 
   const rowsParPage = Math.max(1, Math.floor(usableH / labelHmm));
   const parPage = cols * rowsParPage;
@@ -201,6 +208,7 @@ export function computeLabelLayout(students, options = {}) {
     labelHmm,
     fontMm,
     levelFontMm,
+    levelRowMm,
     pageWmm,
     pageHmm,
     rows,
