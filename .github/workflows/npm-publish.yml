@@ -1,23 +1,28 @@
-# Publication sur npm au push d'un tag `vX.Y.Z` (ou à la main via l'onglet
-# Actions), par TRUSTED PUBLISHING (OIDC) : AUCUN token npm stocké — rien à
-# voler. Prérequis UNIQUE, une fois : sur npmjs.com, page du paquet
-# ltn-print-labels → Settings → Trusted Publisher → GitHub Actions, avec
-# repository `rondeaujf/ltn-print-labels` et workflow `npm-publish.yml`.
-# (La toute première publication du paquet, si elle n'existe pas encore sur le
-# registre, doit se faire en local : le Trusted Publisher se déclare sur un
-# paquet existant.)
+# Publication STAGÉE sur npm au push d'un tag `vX.Y.Z` (ou à la main via
+# l'onglet Actions), par TRUSTED PUBLISHING (OIDC) : AUCUN token npm stocké —
+# rien à voler — et la CI ne peut QUE stager, jamais publier directement.
+# Prérequis UNIQUE, une fois : sur npmjs.com, page du paquet ltn-print-labels
+# → Settings → Trusted Publisher → GitHub Actions, avec repository
+# `rondeaujf/ltn-print-labels`, workflow `npm-publish.yml`, environment vide,
+# permission `npm stage publish` (le défaut depuis septembre 2026 — ne PAS
+# cocher le publish direct : le verrou humain ci-dessous en dépend).
 #
 # Durcissements délibérés :
 #  - actions épinglées par SHA de commit (un tag v4 peut être déplacé) ;
-#  - tests/lint/format joués en étapes séparées puis `npm publish
+#  - tests/lint/format joués en étapes séparées puis `npm stage publish
 #    --ignore-scripts` : aucun code de dépendance ne s'exécute pendant l'étape
-#    qui détient le droit de publier ;
-#  - `permissions` minimal, `id-token: write` ne sert qu'à l'OIDC/provenance.
+#    qui détient le droit de stager ;
+#  - `permissions` minimal, `id-token: write` ne sert qu'à l'OIDC/provenance ;
+#  - publication STAGÉE : même une CI compromise ne peut pas mettre une
+#    version en ligne — l'approbation 2FA du mainteneur reste obligatoire.
 #
 # Flux de release :
 #   1. bump `version` dans package.json + entrée CHANGELOG, merge sur main ;
-#   2. `git tag v0.1.11 && git push origin v0.1.11` — le workflow refuse un
-#      tag qui ne correspond pas à la version du package.json.
+#   2. `git tag v0.1.12 && git push origin v0.1.12` — le workflow refuse un
+#      tag qui ne correspond pas à la version du package.json ;
+#   3. la version arrive en STAGING : l'approuver (2FA) sur npmjs.com, onglet
+#      Versions du paquet, une fois le scan anti-malware terminé — c'est là
+#      qu'elle devient publique.
 name: Publier sur npm
 
 on:
@@ -45,7 +50,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      # Le Trusted Publishing exige npm ≥ 11.5.1 (Node 22 embarque npm 10).
+      # Le Trusted Publishing exige npm ≥ 11.5.1 et `npm stage publish`
+      # npm ≥ 11.15 (Node 22 embarque npm 10).
       - run: npm install -g npm@latest
 
       # Un tag v0.1.11 qui publierait le package.json en 0.1.10 = erreur
@@ -67,14 +73,9 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
 
-      # Diagnostic OIDC : sans `id-token: write` effectif, cette URL est
-      # absente et npm ne peut pas tenter le Trusted Publishing.
-      - name: OIDC disponible ?
-        run: |
-          echo "npm $(npm --version)"
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL: ${ACTIONS_ID_TOKEN_REQUEST_URL:+présente}"
-
-      # --ignore-scripts : l'étape qui détient le droit de publier n'exécute
-      # AUCUN script de cycle de vie (les vérifications viennent d'être jouées
-      # ci-dessus). Authentification par OIDC, provenance générée d'office.
-      - run: npm publish --ignore-scripts --loglevel http
+      # STAGE, pas publish : la permission OIDC du Trusted Publisher est
+      # stage-only, la mise en ligne passe par l'approbation 2FA du mainteneur
+      # sur npmjs.com. --ignore-scripts : l'étape qui détient le droit de
+      # stager n'exécute AUCUN script de cycle de vie (les vérifications
+      # viennent d'être jouées ci-dessus). Provenance générée d'office.
+      - run: npm stage publish --ignore-scripts
