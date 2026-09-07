@@ -1,0 +1,50 @@
+# Publication sur npm au push d'un tag `vX.Y.Z` (ou à la main via l'onglet
+# Actions). Prérequis UNIQUE : un token npm « Automation » enregistré comme
+# secret `NPM_TOKEN` du dépôt (Settings → Secrets and variables → Actions).
+#
+# Flux de release :
+#   1. bump `version` dans package.json + entrée CHANGELOG, merge sur main ;
+#   2. `git tag v0.1.11 && git push origin v0.1.11` — le workflow vérifie que
+#      le tag correspond à la version, joue prepublishOnly (tests + lint +
+#      format) via `npm publish`, et publie avec provenance (dépôt public).
+name: Publier sur npm
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # provenance npm (attestation Sigstore du build)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # Un tag v0.1.11 qui publierait le package.json en 0.1.10 = erreur
+      # d'étourderie classique ; on refuse avant de toucher au registre.
+      - name: Le tag doit égaler la version du package
+        if: github.ref_type == 'tag'
+        run: |
+          pkg="v$(node -p "require('./package.json').version")"
+          if [ "$pkg" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME ≠ package.json $pkg"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      # prepublishOnly (npm test && lint && format:check) est joué par npm
+      # publish lui-même : une suite rouge bloque la publication.
+      - run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
