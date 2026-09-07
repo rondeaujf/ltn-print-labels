@@ -2,6 +2,14 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.11
+
+- Level line is LEFT-aligned again (the name stays centred). The original
+  intent (0.1.2/0.1.3) had been dropped because mPDF ignores `text-align`
+  on a div inside a table cell; the consumer's PDF template now renders the
+  cell through a nested table whose level `<td>` carries `text-align:left`
+  — the one construct mPDF honours — so the preview mirrors that.
+
 ## 0.1.10
 
 - Preview cell width is now derived from the page's REAL inner pixel box

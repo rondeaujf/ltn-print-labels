@@ -95,12 +95,19 @@ describe("createLabelPreview", () => {
     expect(parseFloat(page.style.height)).toBeLessThanOrEqual(400);
   });
 
-  it("affiche le niveau quand showLevel est vrai", () => {
+  it("affiche le niveau quand showLevel est vrai, aligné à GAUCHE", () => {
     createLabelPreview(host, [S("Léa", "Martin", "CE1")], {
       labelMm: 55,
       showLevel: true,
     });
-    expect(host.querySelector(".lpl-cell__lvl")?.textContent).toBe("CE1");
+    const lvl = host.querySelector(".lpl-cell__lvl");
+    expect(lvl?.textContent).toBe("CE1");
+    // Le niveau est à gauche, le prénom reste centré (miroir du PDF : table
+    // imbriquée mPDF dont le td niveau porte text-align:left).
+    expect(lvl.style.textAlign).toBe("left");
+    expect(host.querySelector(".lpl-cell__name").style.textAlign).toBe(
+      "center",
+    );
   });
 
   it("maxPreviewHeight réduit la feuille pour la garder entière", () => {

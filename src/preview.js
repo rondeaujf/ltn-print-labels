@@ -132,9 +132,13 @@ export function createLabelPreview(container, students, options = {}) {
           `font-family:${FONT_STACK};`;
 
         if (cell.level) {
+          // Niveau ALIGNÉ À GAUCHE (le prénom reste centré). Côté PDF, mPDF ne
+          // sait pas aligner autrement un bloc DANS une case qu'en passant par
+          // une table imbriquée dont le td porte text-align:left — l'aperçu
+          // reflète ce rendu-là (cf. etiquettes_pdf.mustache du consommateur).
           const lvl = document.createElement("div");
           lvl.className = "lpl-cell__lvl";
-          lvl.style.cssText = `font:400 ${clf}px/1 ${FONT_STACK};color:#8a8a8a;text-align:center;`;
+          lvl.style.cssText = `font:400 ${clf}px/1 ${FONT_STACK};color:#8a8a8a;text-align:left;`;
           lvl.textContent = cell.level;
           c.appendChild(lvl);
         }
