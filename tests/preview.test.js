@@ -110,6 +110,44 @@ describe("createLabelPreview", () => {
     );
   });
 
+  it("le badge de niveau reste TOUJOURS en haut à gauche, au même endroit", () => {
+    // Élèves avec/sans niveau et noms de longueurs très différentes : le
+    // badge doit occuper le même emplacement structurel (première case
+    // enfant, hauteur fixe identique) sur TOUTE la planche.
+    const roster = [
+      S("Al", "Xy", "CE1"),
+      S("Alexandre-Christophe", "Vandenberghe-Moreau", ""), // pas de niveau
+    ];
+    createLabelPreview(host, roster, {
+      labelMm: 55,
+      orient: "P",
+      fields: "both",
+      showLevel: true,
+      maxPreviewWidth: 600,
+    });
+    const cells = host.querySelectorAll(".lpl-grid .lpl-cell");
+    expect(cells.length).toBeGreaterThanOrEqual(2);
+    const heights = new Set();
+    for (const c of cells) {
+      // Le badge est TOUJOURS le premier enfant (position fixe), qu'un
+      // niveau soit renseigné ou non pour cet élève.
+      const lvl = c.firstElementChild;
+      expect(lvl.className).toBe("lpl-cell__lvl");
+      heights.add(lvl.style.height);
+    }
+    // Une seule hauteur de bande sur toute la planche : jamais dérivée du nom
+    // ou de la présence d'un niveau pour cet élève précis.
+    expect(heights.size).toBe(1);
+  });
+
+  it("aucun badge de niveau quand showLevel est faux", () => {
+    createLabelPreview(host, [S("Léa", "Martin", "CE1")], {
+      labelMm: 55,
+      showLevel: false,
+    });
+    expect(host.querySelector(".lpl-cell__lvl")).toBeNull();
+  });
+
   it("maxPreviewHeight réduit la feuille pour la garder entière", () => {
     createLabelPreview(host, [S("Léa", "Martin")], {
       labelMm: 55,

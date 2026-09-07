@@ -103,6 +103,33 @@ describe("computeLabelLayout", () => {
     }
   });
 
+  it("la géométrie (largeurs, polices, bande de niveau) ne dépend JAMAIS du contenu", () => {
+    // Régression : la largeur de colonne (et tout ce qui en dérive) doit
+    // rester identique quel que soit le nom le plus long de la classe — y
+    // compris la bande réservée au badge de niveau, qui doit se tenir à la
+    // même place sur toute la planche.
+    const opts = { labelMm: 55, orient: "P", fields: "both", showLevel: true };
+    const short = computeLabelLayout([S("Al", "Xy", "CE1")], opts);
+    const long = computeLabelLayout(
+      [S("Alexandre-Christophe", "Vandenberghe-Moreau", "CE1")],
+      opts,
+    );
+    expect(long.cols).toBe(short.cols);
+    expect(long.labelWmm).toBe(short.labelWmm);
+    expect(long.labelHmm).toBe(short.labelHmm);
+    expect(long.fontMm).toBe(short.fontMm);
+    expect(long.levelFontMm).toBe(short.levelFontMm);
+    expect(long.levelRowMm).toBe(short.levelRowMm);
+  });
+
+  it("levelRowMm est une bande fixe dérivée de levelFontMm, jamais nulle", () => {
+    const layout = computeLabelLayout([S("A", "B")], {
+      labelMm: 55,
+      showLevel: true,
+    });
+    expect(layout.levelRowMm).toBeGreaterThan(layout.levelFontMm);
+  });
+
   it("complète la dernière ligne par des cases vides", () => {
     const students = ["A", "B", "C", "D", "E", "F", "G"].map((p) => S(p, "X"));
     const layout = computeLabelLayout(students, { labelMm: 55 });
