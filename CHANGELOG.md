@@ -2,6 +2,21 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.14
+
+- New `cols` option: the number of labels PER ROW, which is what a sheet is
+  really about. What the caller asks for is exactly what it gets, and the
+  label width follows (usable width / cols) — including one label per row,
+  which was simply unreachable before. `LABEL_COLS_BOUNDS`
+  (`{ P: [1, 7], L: [1, 9] }`) is exported so a consumer can drive it from a
+  discrete slider.
+- The `labelMm` option is unchanged and still works when `cols` is absent, but
+  it is now documented for what it is: a TARGET width, snapped to the nearest
+  whole column count, so the value shown is not the value obtained. In
+  portrait, 90, 110 and 120 mm all produce 2 columns of 98 mm — the last third
+  of a mm-based slider does nothing at all. A regression test pins the legacy
+  behaviour value by value.
+
 ## 0.1.13
 
 - Each label now carries its OWN font size: `computeLabelLayout` returns

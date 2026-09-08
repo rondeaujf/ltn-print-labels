@@ -12,9 +12,22 @@
 // C. », puis « Léa Ma. » / « Léa Mi. » ; noms identiques jusqu'au bout →
 // suffixe numérique).
 
-/** Bornes de largeur d'étiquette (mm) selon l'orientation. Le paysage autorise
- *  des étiquettes plus larges (largeur utile ~283 mm contre ~196 mm). */
+/** Bornes de largeur d'étiquette (mm) selon l'orientation, pour l'option
+ *  HISTORIQUE `labelMm`. Le paysage autorise des étiquettes plus larges
+ *  (largeur utile ~283 mm contre ~196 mm).
+ *
+ *  Préférer `cols` (cf. LABEL_COLS_BOUNDS) : une largeur en mm est une CIBLE,
+ *  ramenée au nombre entier de colonnes le plus proche, si bien que la valeur
+ *  affichée n'est pas celle obtenue — en portrait, 90, 110 et 120 mm donnent
+ *  tous 2 colonnes de 98 mm, et 1 étiquette par ligne est inatteignable. */
 export const LABEL_MM_BOUNDS = { P: [30, 120], L: [30, 260] };
+
+/** Bornes du nombre d'étiquettes PAR LIGNE selon l'orientation : de 1 (une
+ *  seule étiquette, pleine largeur utile) au maximum qu'atteignait déjà le
+ *  curseur en mm à son minimum de 30 mm — 7 en portrait, 9 en paysage. C'est
+ *  la façon HONNÊTE de piloter la planche : la valeur choisie est exactement
+ *  celle obtenue, la largeur d'étiquette en découlant (largeur utile / cols). */
+export const LABEL_COLS_BOUNDS = { P: [1, 7], L: [1, 9] };
 
 // A4 [largeur, hauteur] en mm selon l'orientation.
 const PAGE_MM = { P: [210, 297], L: [297, 210] };
@@ -236,7 +249,10 @@ export function resolveLabelText(students, fields) {
 
 /**
  * @param {Array<{firstname?:string,lastname?:string,level?:string}>} students
- * @param {{orient?:"P"|"L",labelMm?:number,fields?:"first"|"last"|"both",showLevel?:boolean}} [options]
+ * @param {{orient?:"P"|"L",cols?:number,labelMm?:number,
+ *   fields?:"first"|"last"|"both",showLevel?:boolean}} [options]
+ *   `cols` = étiquettes par ligne (1..7 en portrait, 1..9 en paysage) ; il a
+ *   la priorité sur `labelMm`, conservé pour compatibilité.
  * @returns {{orient:string,cols:number,groupes:number,rowsPerPage:number,
  *   labelWmm:number,labelHmm:number,fontMm:number,levelFontMm:number,
  *   levelRowMm:number,pageWmm:number,pageHmm:number,
@@ -262,15 +278,32 @@ export function computeLabelLayout(students, options = {}) {
   const usableW = pageWmm - 2 * MARGIN_MM;
   const usableH = pageHmm - 2 * MARGIN_MM - HEADER_FOOTER_MM;
 
-  // Le curseur donne une largeur CIBLE ; on prend le nombre entier de colonnes
-  // le plus proche et on étire l'étiquette pour PAVER la largeur utile de l'A4
-  // (bord à bord, pas de marge latérale résiduelle — comme une vraie planche
-  // d'étiquettes).
-  const targetWmm = Math.max(
-    minMm,
-    Math.min(maxMm, Math.round(Number(options.labelMm) || 55)),
-  );
-  const cols = Math.max(1, Math.round(usableW / targetWmm));
+  // Nombre d'étiquettes par ligne. Deux façons de le fixer :
+  //
+  //  - `cols` (recommandé) : on le prend tel quel, borné. Ce que l'appelant
+  //    demande est exactement ce qu'il obtient.
+  //  - `labelMm` (historique, conservé tel quel pour ne rien casser) : une
+  //    largeur CIBLE, ramenée au nombre entier de colonnes le plus proche. La
+  //    valeur demandée n'est donc PAS celle obtenue (en portrait, 90/110/120
+  //    mm donnent tous 2 colonnes de 98 mm, et 1 par ligne est hors d'atteinte).
+  //
+  // Dans les deux cas l'étiquette est étirée pour PAVER la largeur utile de
+  // l'A4 (bord à bord, pas de marge latérale résiduelle — comme une vraie
+  // planche d'étiquettes).
+  const [minCols, maxCols] = LABEL_COLS_BOUNDS[orient];
+  let cols;
+  if (options.cols != null) {
+    cols = Math.max(
+      minCols,
+      Math.min(maxCols, Math.round(Number(options.cols) || minCols)),
+    );
+  } else {
+    const targetWmm = Math.max(
+      minMm,
+      Math.min(maxMm, Math.round(Number(options.labelMm) || 55)),
+    );
+    cols = Math.max(1, Math.round(usableW / targetWmm));
+  }
   const labelWmm = round1(usableW / cols);
   const labelHmm = round1(labelWmm * HEIGHT_RATIO);
   // « Les deux » = prénom + nom sur l'étiquette : deux mots, il faut une police

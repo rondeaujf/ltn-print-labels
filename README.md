@@ -39,10 +39,17 @@ const roster = [
 
 const options = {
   orient: "P", // "P" | "L"
-  labelMm: 55, // label width in mm (clamped: 30–120 portrait, 30–260 landscape)
+  cols: 4, // labels PER ROW (1–7 portrait, 1–9 landscape) — see LABEL_COLS_BOUNDS
   fields: "first", // "first" | "last" | "both"
   showLevel: true, // show the level as a light line above the name
 };
+
+// `cols` is the honest control: what you ask for is what you get, and the
+// label width follows (usable width / cols). The older `labelMm` option still
+// works and is unchanged, but a width in mm is only a TARGET, snapped to the
+// nearest whole column count — in portrait 90, 110 and 120 mm all yield 2
+// columns of 98 mm, and one label per row is unreachable. Prefer `cols`;
+// `labelMm` is used only when `cols` is absent.
 
 // Live preview inside a dialog. `maxPreviewWidth` / `maxPreviewHeight` (px,
 // preview only — ignored by computeLabelLayout) fix the target size so the
@@ -74,7 +81,9 @@ const layout = computeLabelLayout(roster, options);
 | `disambiguateFirstNames(students)`                 | One label string per student, first names only, collisions resolved. |
 | `resolveLabelText(students, fields)`               | `"first"` / `"last"` / `"both"`.                                     |
 | `createLabelPreview(container, students, options)` | `{ update(students?, options?), destroy() }`.                        |
-| `LABEL_MM_BOUNDS`                                  | `{ P: [30, 120], L: [30, 260] }`.                                    |
+| `LABEL_COLS_BOUNDS`                                | `{ P: [1, 7], L: [1, 9] }` — labels per row, for a discrete slider.  |
+| `LABEL_MM_BOUNDS`                                  | `{ P: [30, 120], L: [30, 260] }` — bounds of the legacy `labelMm`.   |
+| `fitFontMm(text, labelWmm, nominalMm)`             | Font size that makes `text` fit, never breaking a word.              |
 
 `students`: `Array<{ firstname?: string, lastname?: string, level?: string }>`.
 

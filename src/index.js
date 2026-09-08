@@ -14,6 +14,7 @@ export {
   resolveLabelText,
   fitFontMm,
   LABEL_MM_BOUNDS,
+  LABEL_COLS_BOUNDS,
 } from "./layout.js";
 
 export { createLabelPreview } from "./preview.js";
