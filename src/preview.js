@@ -92,18 +92,15 @@ export function createLabelPreview(container, students, options = {}) {
         Math.floor(gridMaxH / Math.max(1, rowsShown)),
       ),
     );
-    const cf = Math.max(1, Math.round((cw * layout.fontMm) / layout.labelWmm));
-    const clf = Math.max(
-      1,
-      Math.round((cw * layout.levelFontMm) / layout.labelWmm),
-    );
-    // Même base d'échelle (cw/labelWmm) que cf/clf : la bande de niveau reste
-    // proportionnée à la police qu'elle contient quels que soient les
-    // arrondis indépendants de ch (hauteur de ligne, bornée pour la page).
-    const clRow = Math.max(
-      1,
-      Math.round((cw * layout.levelRowMm) / layout.labelWmm),
-    );
+    // Facteur mm -> px de cette page (même base que cw/labelWmm) : chaque
+    // étiquette porte SA police (réduite seulement si son nom déborde), il
+    // faut donc convertir par cellule et non une fois pour toutes.
+    const mmToPx = cw / layout.labelWmm;
+    const clf = Math.max(1, Math.round(layout.levelFontMm * mmToPx));
+    // Même base d'échelle que les polices : la bande de niveau reste
+    // proportionnée à celle qu'elle contient quels que soient les arrondis
+    // indépendants de ch (hauteur de ligne, bornée pour tenir dans la page).
+    const clRow = Math.max(1, Math.round(layout.levelRowMm * mmToPx));
 
     const head = document.createElement("div");
     head.className = "lpl-page__head";
@@ -162,9 +159,15 @@ export function createLabelPreview(container, students, options = {}) {
         nameWrap.style.cssText =
           `flex:1 1 auto;min-height:0;overflow:hidden;` +
           `display:flex;align-items:center;justify-content:center;`;
+        // Police de CETTE étiquette : nominale, sauf nom trop long (le module
+        // l'a réduite pour qu'il tienne sans césure ni colonne élargie).
+        const cellF = Math.max(
+          1,
+          Math.round((cell.fontMm ?? layout.fontMm) * mmToPx),
+        );
         const name = document.createElement("div");
         name.className = "lpl-cell__name";
-        name.style.cssText = `font:700 ${cf}px/1.05 ${FONT_STACK};text-align:center;overflow:hidden;width:100%;`;
+        name.style.cssText = `font:700 ${cellF}px/1.05 ${FONT_STACK};text-align:center;overflow:hidden;width:100%;`;
         name.textContent = cell.name || "";
         nameWrap.appendChild(name);
         c.appendChild(nameWrap);

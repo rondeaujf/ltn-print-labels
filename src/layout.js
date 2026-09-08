@@ -31,6 +31,113 @@ const LEVEL_FONT_RATIO = 0.5; // corps du niveau = moitié de celui du prénom
 // nom ou la présence/absence de niveau d'un élève donné.
 const LEVEL_ROW_RATIO = 1.3;
 
+// Marge horizontale réservée dans l'étiquette (mm, les deux côtés cumulés) :
+// filets de découpe + respiration. Le texte dispose de labelWmm - ceci.
+const LABEL_PAD_MM = 1;
+// Garde-fou absolu (police jamais nulle ou négative). Volontairement TRÈS
+// bas : un plancher plus haut laisserait déborder les noms très longs sur les
+// petites étiquettes, et un nom qui déborde fait élargir toute la colonne
+// dans mPDF — c'est exactement le bug qu'on ferme ici. À 1 mm, une étiquette
+// de 28 mm (la plus petite) tient encore une quarantaine de caractères.
+const MIN_FONT_MM = 1;
+
+// Largeur de chaque caractère, en multiples de la taille de police (une lettre
+// de ratio 0.7 dans un corps de 10 mm occupe 7 mm). Table MESURÉE, prenant
+// pour chaque caractère le MAXIMUM entre Arial Bold (police de l'aperçu, via
+// canvas.measureText) et DejaVu Sans Condensed Bold (police du PDF, via
+// Mpdf::GetStringWidth) : un texte calculé pour tenir tient donc dans les DEUX
+// rendus, ce qui garde l'aperçu et le PDF cohérents.
+const CHAR_WIDTH_GROUPS = {
+  "'": 0.275,
+  ijlîï: 0.308,
+  " ": 0.313,
+  IÎÏ: 0.334,
+  ".’": 0.342,
+  "-": 0.374,
+  f: 0.391,
+  "()": 0.411,
+  t: 0.43,
+  r: 0.444,
+  z: 0.523,
+  Jcsç: 0.556,
+  x: 0.58,
+  vyÿ: 0.586,
+  k: 0.598,
+  aàâä: 0.607,
+  eèéêë: 0.61,
+  L: 0.611,
+  T: 0.614,
+  F: 0.615,
+  oôö: 0.618,
+  "0123456789": 0.626,
+  hnuñùûü: 0.641,
+  bdgpq: 0.644,
+  Z: 0.652,
+  EPSYÈÉÊËŸ: 0.667,
+  X: 0.694,
+  V: 0.696,
+  ABCKRÀÂÄÇ: 0.722,
+  UÙÛÜ: 0.73,
+  D: 0.747,
+  HNÑ: 0.753,
+  GOQÔÖ: 0.778,
+  w: 0.831,
+  M: 0.896,
+  m: 0.938,
+  æ: 0.943,
+  œ: 0.984,
+  W: 0.993,
+  Æ: 1,
+  Œ: 1.05,
+};
+
+// Caractère hors table (alphabet exotique, symbole) : on prend le plus large
+// mesuré, pour ne jamais SOUS-estimer une largeur — sous-estimer ferait
+// déborder le nom et, dans mPDF, élargirait toute la colonne.
+const CHAR_WIDTH_FALLBACK = 1.05;
+
+const CHAR_WIDTH = (() => {
+  const m = new Map();
+  for (const [chars, w] of Object.entries(CHAR_WIDTH_GROUPS)) {
+    for (const c of chars) m.set(c, w);
+  }
+  return m;
+})();
+
+/**
+ * Largeur d'un texte en multiples de la taille de police (sans unité) : la
+ * largeur en mm vaut `textWidthRatio(t) * fontMm`.
+ * @param {string} text
+ * @returns {number}
+ */
+function textWidthRatio(text) {
+  let w = 0;
+  for (const c of String(text)) {
+    w += CHAR_WIDTH.get(c) ?? CHAR_WIDTH_FALLBACK;
+  }
+  return w;
+}
+
+/**
+ * Corps de police d'UNE étiquette : la taille nominale, réduite UNIQUEMENT si
+ * ce nom-là déborde de la largeur imposée. Les noms courts gardent donc la
+ * taille nominale — seuls les longs rapetissent — et aucune étiquette n'a
+ * besoin d'être élargie ni le nom coupé (mPDF élargirait sinon toute la
+ * colonne au mot le plus long, cf. Mpdf::_tableColumnWidth).
+ * @param {string} text
+ * @param {number} labelWmm largeur de l'étiquette (mm)
+ * @param {number} nominalMm corps de police nominal (mm)
+ * @returns {number} corps de police à utiliser pour ce texte (mm)
+ */
+export function fitFontMm(text, labelWmm, nominalMm) {
+  const ratio = textWidthRatio(text);
+  const avail = labelWmm - LABEL_PAD_MM;
+  if (ratio <= 0 || avail <= 0) return nominalMm;
+  if (ratio * nominalMm <= avail) return nominalMm; // tient déjà
+  // Arrondi PAR DÉFAUT au dixième : arrondir au-dessus ferait déborder.
+  return Math.max(MIN_FONT_MM, Math.floor((avail / ratio) * 10) / 10);
+}
+
 function round1(n) {
   return Math.round(n * 10) / 10;
 }
@@ -133,7 +240,8 @@ export function resolveLabelText(students, fields) {
  * @returns {{orient:string,cols:number,groupes:number,rowsPerPage:number,
  *   labelWmm:number,labelHmm:number,fontMm:number,levelFontMm:number,
  *   levelRowMm:number,pageWmm:number,pageHmm:number,
- *   rows:Array<{cells:Array<{name:string,level:string,empty:boolean}>}>}}
+ *   rows:Array<{cells:Array<{name:string,level:string,empty:boolean,
+ *     fontMm:number}>}>}}
  */
 export function computeLabelLayout(students, options = {}) {
   const list = (Array.isArray(students) ? students : []).filter(
@@ -183,6 +291,10 @@ export function computeLabelLayout(students, options = {}) {
     name: text[i],
     level: showLevel ? String(s.level ?? "").trim() : "",
     empty: false,
+    // Police PROPRE à cette étiquette : nominale par défaut, réduite pour le
+    // seul nom qui déborderait. Les colonnes gardent ainsi toutes la même
+    // largeur (labelWmm) et aucun nom n'est coupé.
+    fontMm: fitFontMm(text[i], labelWmm, fontMm),
   }));
 
   const suite = [];
@@ -194,7 +306,7 @@ export function computeLabelLayout(students, options = {}) {
   for (let i = 0; i < suite.length; i += cols) {
     const cells = suite.slice(i, i + cols);
     while (cells.length < cols) {
-      cells.push({ name: "", level: "", empty: true });
+      cells.push({ name: "", level: "", empty: true, fontMm });
     }
     rows.push({ cells });
   }

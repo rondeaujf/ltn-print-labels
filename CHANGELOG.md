@@ -2,6 +2,25 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.13
+
+- Each label now carries its OWN font size: `computeLabelLayout` returns
+  `fontMm` per cell, equal to the nominal size for names that fit and reduced
+  only for the ones that would overflow the label width. Words are never
+  broken and the label width never changes — which is what finally keeps every
+  column identical in the consumer's mPDF output. mPDF has no
+  `table-layout: fixed` support at all (the property is absent from its source)
+  and widens any column whose longest WORD does not fit, overriding width, %,
+  colgroup and table width alike; a single long first name produced a column
+  ~3x wider than the others. With no name overflowing, that path is never
+  taken.
+- New exported helper `fitFontMm(text, labelWmm, nominalMm)` and a measured
+  per-character width table, taking for each character the MAXIMUM between
+  Arial Bold (browser preview, `canvas.measureText`) and DejaVu Sans Condensed
+  Bold (mPDF, `Mpdf::GetStringWidth`), so a size computed to fit holds in BOTH
+  renderers. Verified against real mPDF metrics: 184 name/label-width
+  combinations, zero overflow.
+
 ## 0.1.12
 
 - The level badge is now a truly PINNED top-left corner mark: `layout.levelRowMm`
