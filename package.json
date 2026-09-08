@@ -1,6 +1,6 @@
 {
   "name": "ltn-print-labels",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Standalone vanilla JS module for a printable label grid of student names: last-name disambiguation of identical first names, whole-group repetition to fill A4 pages, portrait/landscape, WYSIWYG full-page preview. No backend.",
   "type": "module",
   "main": "src/index.js",

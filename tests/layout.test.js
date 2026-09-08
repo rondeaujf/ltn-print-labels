@@ -5,6 +5,7 @@ import {
   resolveLabelText,
   fitFontMm,
   LABEL_MM_BOUNDS,
+  LABEL_COLS_BOUNDS,
 } from "../src/index.js";
 
 const S = (firstname, lastname, level) => ({ firstname, lastname, level });
@@ -123,6 +124,71 @@ describe("fitFontMm", () => {
     const attendu = ratios.L + ratios.é + ratios.a;
     const f = fitFontMm(nom, 6, 11.8); // étiquette étroite -> réduction
     expect(attendu * f).toBeLessThanOrEqual(6 - 1 + 1e-9);
+  });
+});
+
+describe("computeLabelLayout — étiquettes par ligne (cols)", () => {
+  const S1 = [{ firstname: "Léa", lastname: "Martin" }];
+
+  it("donne EXACTEMENT le nombre d'étiquettes par ligne demandé", () => {
+    for (const [orient, usable] of [
+      ["P", 196],
+      ["L", 283],
+    ]) {
+      const [min, max] = LABEL_COLS_BOUNDS[orient];
+      for (let n = min; n <= max; n++) {
+        const l = computeLabelLayout(S1, { orient, cols: n });
+        expect(l.cols).toBe(n);
+        // l'étiquette pave la largeur utile : n x largeur = largeur utile
+        expect(l.cols * l.labelWmm).toBeCloseTo(usable, 0);
+      }
+    }
+  });
+
+  it("une seule étiquette par ligne occupe toute la largeur utile", () => {
+    expect(computeLabelLayout(S1, { orient: "P", cols: 1 }).labelWmm).toBe(196);
+    expect(computeLabelLayout(S1, { orient: "L", cols: 1 }).labelWmm).toBe(283);
+  });
+
+  it("borne les valeurs hors plage sans jamais planter", () => {
+    expect(computeLabelLayout(S1, { orient: "P", cols: 0 }).cols).toBe(1);
+    expect(computeLabelLayout(S1, { orient: "P", cols: 99 }).cols).toBe(7);
+    expect(computeLabelLayout(S1, { orient: "L", cols: 99 }).cols).toBe(9);
+    expect(computeLabelLayout(S1, { orient: "P", cols: 3.4 }).cols).toBe(3);
+  });
+
+  it("cols a la priorité sur labelMm", () => {
+    const l = computeLabelLayout(S1, { orient: "P", cols: 1, labelMm: 30 });
+    expect(l.cols).toBe(1);
+  });
+
+  it("RÉGRESSION : sans cols, labelMm se comporte comme avant", () => {
+    // Valeurs relevées AVANT l'ajout de l'option cols.
+    const attendu = {
+      P: [
+        [30, 7, 28],
+        [55, 4, 49],
+        [90, 2, 98],
+        [120, 2, 98],
+      ],
+      L: [
+        [30, 9, 31.4],
+        [55, 5, 56.6],
+        [120, 2, 141.5],
+        [260, 1, 283],
+      ],
+    };
+    for (const [orient, cas] of Object.entries(attendu)) {
+      for (const [labelMm, cols, labelWmm] of cas) {
+        const l = computeLabelLayout(S1, { orient, labelMm });
+        expect([orient, labelMm, l.cols, l.labelWmm]).toEqual([
+          orient,
+          labelMm,
+          cols,
+          labelWmm,
+        ]);
+      }
+    }
   });
 });
 
