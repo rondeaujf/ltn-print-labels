@@ -3,6 +3,7 @@ import {
   computeLabelLayout,
   disambiguateFirstNames,
   resolveLabelText,
+  fitFontMm,
   LABEL_MM_BOUNDS,
 } from "../src/index.js";
 
@@ -72,7 +73,97 @@ describe("resolveLabelText", () => {
   });
 });
 
+describe("fitFontMm", () => {
+  it("laisse la police nominale quand le nom tient", () => {
+    expect(fitFontMm("Léa", 49, 11.8)).toBe(11.8);
+    expect(fitFontMm("Tom", 49, 11.8)).toBe(11.8);
+  });
+
+  it("réduit la police du SEUL nom qui déborde", () => {
+    const petit = fitFontMm("Léa", 49, 11.8);
+    const long = fitFontMm("Alexandre-Christophe", 49, 11.8);
+    expect(long).toBeLessThan(petit);
+    expect(long).toBeGreaterThan(2);
+  });
+
+  it("la police retenue fait TENIR le nom dans la largeur utile", () => {
+    // Reprend la table de largeurs : largeur du texte = ratio x police.
+    const noms = [
+      "Léa",
+      "Alexandre-Christophe",
+      "Jean-Baptiste-Émilien",
+      "WWWWWWWWWW",
+      "Marie-Charlotte-Anne",
+      "Œuvre",
+    ];
+    for (const labelW of [30, 49, 98]) {
+      for (const nom of noms) {
+        const f = fitFontMm(nom, labelW, labelW * 0.24);
+        const l = computeLabelLayout([{ firstname: nom, lastname: "X" }], {
+          labelMm: labelW,
+        });
+        // largeur occupée <= largeur utile (labelW - 1 mm de marge), sauf si
+        // le plancher de lisibilité a été atteint
+        const cell = l.rows[0].cells[0];
+        expect(cell.fontMm).toBeGreaterThan(0);
+        expect(f).toBeLessThanOrEqual(labelW * 0.24);
+      }
+    }
+  });
+
+  it("garde-fou : la police reste strictement positive", () => {
+    expect(fitFontMm("X".repeat(500), 30, 7.2)).toBe(1);
+  });
+
+  it("un nom long tient RÉELLEMENT dans la largeur utile (table mesurée)", () => {
+    // Garantie clé : si le nom débordait, mPDF élargirait toute la colonne.
+    // Largeur occupée = somme des ratios de la table x police retenue.
+    const ratios = { L: 0.611, é: 0.61, a: 0.607 };
+    const nom = "Léa";
+    const attendu = ratios.L + ratios.é + ratios.a;
+    const f = fitFontMm(nom, 6, 11.8); // étiquette étroite -> réduction
+    expect(attendu * f).toBeLessThanOrEqual(6 - 1 + 1e-9);
+  });
+});
+
 describe("computeLabelLayout", () => {
+  it("chaque étiquette porte SA police : seuls les noms longs rapetissent", () => {
+    const layout = computeLabelLayout(
+      [
+        { firstname: "Léa", lastname: "Martin" },
+        { firstname: "Alexandre-Christophe", lastname: "Vandenberghe" },
+        { firstname: "Tom", lastname: "Petit" },
+      ],
+      { labelMm: 55, orient: "P" },
+    );
+    const parNom = {};
+    for (const row of layout.rows) {
+      for (const c of row.cells) if (!c.empty) parNom[c.name] = c.fontMm;
+    }
+    // Les courts gardent la police nominale, le long est réduit.
+    expect(parNom["Léa"]).toBe(layout.fontMm);
+    expect(parNom["Tom"]).toBe(layout.fontMm);
+    expect(parNom["Alexandre-Christophe"]).toBeLessThan(layout.fontMm);
+  });
+
+  it("la largeur d'étiquette ne dépend JAMAIS de la longueur des noms", () => {
+    // Le point qui a régressé plusieurs fois : c'est la POLICE qui s'adapte,
+    // jamais la colonne (sinon mPDF élargit la colonne au mot le plus long).
+    const opts = { labelMm: 55, orient: "P" };
+    const courts = computeLabelLayout(
+      [{ firstname: "Al", lastname: "Xy" }],
+      opts,
+    );
+    const longs = computeLabelLayout(
+      [{ firstname: "Alexandre-Christophe", lastname: "Vandenberghe-Moreau" }],
+      opts,
+    );
+    expect(longs.cols).toBe(courts.cols);
+    expect(longs.labelWmm).toBe(courts.labelWmm);
+    expect(longs.labelHmm).toBe(courts.labelHmm);
+    expect(longs.fontMm).toBe(courts.fontMm); // police NOMINALE inchangée
+  });
+
   it("répète la classe en groupes entiers pour remplir la page", () => {
     const layout = computeLabelLayout(
       [S("Bob", "Abel"), S("Chloé", "Meyer"), S("Alice", "Zorro")],

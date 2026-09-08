@@ -60,6 +60,10 @@ const layout = computeLabelLayout(roster, options);
 // `levelRowMm`: fixed-height band reserved at the top of every cell for the
 // level badge (pinned top-left, same place on every label, independent of
 // any student's name or level text — see `showLevel`).
+// Each cell also carries its own `fontMm`: the nominal size for names that
+// fit, reduced only for the ones that would overflow the label. Words are
+// never broken and the label width never varies, so every column stays
+// identical — including in a server-side PDF renderer such as mPDF.
 ```
 
 ## API

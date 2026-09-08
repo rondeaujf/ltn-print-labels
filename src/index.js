@@ -12,6 +12,7 @@ export {
   computeLabelLayout,
   disambiguateFirstNames,
   resolveLabelText,
+  fitFontMm,
   LABEL_MM_BOUNDS,
 } from "./layout.js";
 
