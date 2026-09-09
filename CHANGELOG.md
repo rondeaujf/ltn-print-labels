@@ -2,6 +2,26 @@
 
 All notable changes to `ltn-print-labels`.
 
+## 0.1.15
+
+- New `fontMm` option: the MAX font size (mm), a second control alongside
+  `cols`. The per-label principle is unchanged — every label uses this size,
+  and only the names that would overflow are shrunk cell by cell. When
+  `fontMm` is omitted it is now computed automatically so that **~85 % of the
+  labels share the same size** (the ~15 % longest names are the ones that
+  shrink), instead of the fixed `labelWmm * 0.24`. This keeps a sheet visually
+  even without a tiny common size on classes that have a few very long names.
+- `computeLabelLayout` returns three new fields to drive that second slider:
+  `fontMmAuto` (the 85 % value), `fontMmMin` and `fontMmMax`
+  (`labelWmm * 0.30`). A supplied `fontMm` is clamped to `[fontMmMin,
+fontMmMax]`; `0`, negative or non-numeric falls back to `fontMmAuto`.
+- New exported helper `autoNominalFontMm(texts, labelWmm, ceilingMm, quantile?)`
+  — the quantile-th smallest per-label fit size, capped at `ceilingMm`
+  (`labelWmm * 0.24`, `* 0.6` for `fields: "both"`).
+- The level badge size (`levelFontMm` / `levelRowMm`) is untouched: still
+  derived from `labelWmm`, so the badge slot stays in the exact same place
+  whatever the chosen max font.
+
 ## 0.1.14
 
 - New `cols` option: the number of labels PER ROW, which is what a sheet is

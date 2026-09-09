@@ -4,6 +4,7 @@ import {
   disambiguateFirstNames,
   resolveLabelText,
   fitFontMm,
+  autoNominalFontMm,
   LABEL_MM_BOUNDS,
   LABEL_COLS_BOUNDS,
 } from "../src/index.js";
@@ -194,13 +195,16 @@ describe("computeLabelLayout — étiquettes par ligne (cols)", () => {
 
 describe("computeLabelLayout", () => {
   it("chaque étiquette porte SA police : seuls les noms longs rapetissent", () => {
+    // Police max IMPOSÉE : on isole la réduction cellule par cellule du calcul
+    // automatique de la nominale (qui, lui, dépend volontairement de la
+    // distribution des noms — cf. describe « police max »).
     const layout = computeLabelLayout(
       [
         { firstname: "Léa", lastname: "Martin" },
         { firstname: "Alexandre-Christophe", lastname: "Vandenberghe" },
         { firstname: "Tom", lastname: "Petit" },
       ],
-      { labelMm: 55, orient: "P" },
+      { labelMm: 55, orient: "P", fontMm: 12 },
     );
     const parNom = {};
     for (const row of layout.rows) {
@@ -213,9 +217,11 @@ describe("computeLabelLayout", () => {
   });
 
   it("la largeur d'étiquette ne dépend JAMAIS de la longueur des noms", () => {
-    // Le point qui a régressé plusieurs fois : c'est la POLICE qui s'adapte,
-    // jamais la colonne (sinon mPDF élargit la colonne au mot le plus long).
-    const opts = { labelMm: 55, orient: "P" };
+    // Le point qui a régressé plusieurs fois : c'est la POLICE d'une cellule
+    // qui s'adapte, jamais la colonne (sinon mPDF élargit la colonne au mot le
+    // plus long). Police max imposée : la nominale reste alors, elle aussi,
+    // indépendante du contenu.
+    const opts = { labelMm: 55, orient: "P", fontMm: 10 };
     const courts = computeLabelLayout(
       [{ firstname: "Al", lastname: "Xy" }],
       opts,
@@ -227,7 +233,7 @@ describe("computeLabelLayout", () => {
     expect(longs.cols).toBe(courts.cols);
     expect(longs.labelWmm).toBe(courts.labelWmm);
     expect(longs.labelHmm).toBe(courts.labelHmm);
-    expect(longs.fontMm).toBe(courts.fontMm); // police NOMINALE inchangée
+    expect(longs.fontMm).toBe(courts.fontMm); // police NOMINALE imposée inchangée
   });
 
   it("répète la classe en groupes entiers pour remplir la page", () => {
@@ -265,7 +271,13 @@ describe("computeLabelLayout", () => {
     // rester identique quel que soit le nom le plus long de la classe — y
     // compris la bande réservée au badge de niveau, qui doit se tenir à la
     // même place sur toute la planche.
-    const opts = { labelMm: 55, orient: "P", fields: "both", showLevel: true };
+    const opts = {
+      labelMm: 55,
+      orient: "P",
+      fields: "both",
+      showLevel: true,
+      fontMm: 6, // police max imposée : nominale indépendante du contenu
+    };
     const short = computeLabelLayout([S("Al", "Xy", "CE1")], opts);
     const long = computeLabelLayout(
       [S("Alexandre-Christophe", "Vandenberghe-Moreau", "CE1")],
@@ -358,5 +370,134 @@ describe("computeLabelLayout", () => {
   it("lève une erreur sans élève", () => {
     expect(() => computeLabelLayout([], { labelMm: 55 })).toThrow();
     expect(() => computeLabelLayout([{ firstname: "  " }], {})).toThrow();
+  });
+});
+
+describe("computeLabelLayout — police max (fontMm)", () => {
+  const SHORT = [
+    "Léa",
+    "Tom",
+    "Zoé",
+    "Noé",
+    "Jade",
+    "Lou",
+    "Eva",
+    "Nina",
+    "Hugo",
+    "Léo",
+    "Emma",
+    "Adam",
+    "Iris",
+    "Anna",
+    "Paul",
+    "Rose",
+    "Jules",
+  ];
+  const LONG = [
+    "Alexandre-Christophe",
+    "Marie-Charlotte-Anne",
+    "Jean-Baptiste-Émilien",
+  ];
+  const CLASSE = [...SHORT, ...LONG].map((f) => S(f, "X"));
+  const OPTS = { labelMm: 55, orient: "P" };
+
+  function fontByName(layout) {
+    const m = new Map();
+    for (const row of layout.rows) {
+      for (const c of row.cells) if (!c.empty) m.set(c.name, c.fontMm);
+    }
+    return m;
+  }
+
+  it("par défaut, >= 85 % des étiquettes partagent la police nominale", () => {
+    const layout = computeLabelLayout(CLASSE, OPTS);
+    const byName = fontByName(layout);
+    const atNominal = [...byName.values()].filter(
+      (v) => v === layout.fontMm,
+    ).length;
+    expect(atNominal / byName.size).toBeGreaterThanOrEqual(0.85);
+    // ... mais pas 100 % : les noms les plus longs, eux, ont bien rapetissé.
+    expect(atNominal).toBeLessThan(byName.size);
+    for (const n of LONG) expect(byName.get(n)).toBeLessThan(layout.fontMm);
+  });
+
+  it("expose les bornes du curseur et la valeur auto", () => {
+    const l = computeLabelLayout(CLASSE, OPTS);
+    expect(l.fontMmMin).toBe(1);
+    expect(l.fontMmMax).toBe(Math.round(l.labelWmm * 0.3 * 10) / 10);
+    // l'auto ne dépasse jamais le défaut historique (largeur x 0.24)...
+    expect(l.fontMmAuto).toBeLessThanOrEqual(
+      Math.round(l.labelWmm * 0.24 * 10) / 10,
+    );
+    // ... et reste dans les bornes.
+    expect(l.fontMmAuto).toBeGreaterThanOrEqual(l.fontMmMin);
+    expect(l.fontMmAuto).toBeLessThanOrEqual(l.fontMmMax);
+    expect(l.fontMm).toBe(l.fontMmAuto); // aucune valeur fournie -> auto
+  });
+
+  it("une police max fournie est utilisée telle quelle, bornée", () => {
+    expect(computeLabelLayout(CLASSE, { ...OPTS, fontMm: 8 }).fontMm).toBe(8);
+    const max = computeLabelLayout(CLASSE, OPTS).fontMmMax;
+    expect(computeLabelLayout(CLASSE, { ...OPTS, fontMm: 999 }).fontMm).toBe(
+      max,
+    );
+    expect(computeLabelLayout(CLASSE, { ...OPTS, fontMm: 0.01 }).fontMm).toBe(
+      1,
+    );
+    // valeur absente / non valide -> retour à l'auto
+    const auto = computeLabelLayout(CLASSE, OPTS).fontMmAuto;
+    expect(computeLabelLayout(CLASSE, { ...OPTS, fontMm: 0 }).fontMm).toBe(
+      auto,
+    );
+    expect(computeLabelLayout(CLASSE, { ...OPTS, fontMm: "x" }).fontMm).toBe(
+      auto,
+    );
+  });
+
+  it("police max fournie : la nominale ne dépend plus du contenu", () => {
+    const a = computeLabelLayout([S("Al", "Xy")], { ...OPTS, fontMm: 9 });
+    const b = computeLabelLayout([S("Alexandre-Christophe", "Vandenberghe")], {
+      ...OPTS,
+      fontMm: 9,
+    });
+    expect(a.fontMm).toBe(9);
+    expect(b.fontMm).toBe(9);
+  });
+
+  it("« les deux » (prénom + nom) donne une police auto plus petite", () => {
+    const first = computeLabelLayout(CLASSE, { ...OPTS, fields: "first" });
+    const both = computeLabelLayout(CLASSE, { ...OPTS, fields: "both" });
+    expect(both.fontMmAuto).toBeLessThan(first.fontMmAuto);
+  });
+
+  describe("autoNominalFontMm", () => {
+    const ceiling = 12;
+
+    it("plafonne quand la plupart des noms tiennent large", () => {
+      const texts = [...SHORT, ...LONG];
+      expect(autoNominalFontMm(texts, 49, ceiling)).toBe(ceiling);
+    });
+
+    it("descend sous le plafond quand presque tous les noms sont longs", () => {
+      const texts = Array.from({ length: 20 }, () => "Marie-Charlotte-Anne");
+      expect(autoNominalFontMm(texts, 49, ceiling)).toBeLessThan(ceiling);
+      expect(autoNominalFontMm(texts, 49, ceiling)).toBeGreaterThan(1);
+    });
+
+    it("liste vide ou largeur nulle : renvoie le plafond", () => {
+      expect(autoNominalFontMm([], 49, ceiling)).toBe(ceiling);
+      expect(autoNominalFontMm(["Léa"], 0, ceiling)).toBe(ceiling);
+    });
+
+    it("le quantile règle la part de noms qu'on laisse rapetisser", () => {
+      const texts = [
+        ...Array(18).fill("Léa"),
+        ...Array(2).fill("W".repeat(20)),
+      ];
+      // 10 % -> les 2 longs (10 %) restent hors nominale, la valeur plafonne
+      expect(autoNominalFontMm(texts, 49, ceiling, 0.1)).toBe(ceiling);
+      // 0 % -> aucune tolérance : la nominale tombe à la taille du plus long
+      expect(autoNominalFontMm(texts, 49, ceiling, 0)).toBeLessThan(ceiling);
+    });
   });
 });

@@ -40,6 +40,7 @@ const roster = [
 const options = {
   orient: "P", // "P" | "L"
   cols: 4, // labels PER ROW (1–7 portrait, 1–9 landscape) — see LABEL_COLS_BOUNDS
+  fontMm: undefined, // MAX font size (mm); omit → auto: ~85 % of labels share it
   fields: "first", // "first" | "last" | "both"
   showLevel: true, // show the level as a light line above the name
 };
@@ -51,6 +52,12 @@ const options = {
 // columns of 98 mm, and one label per row is unreachable. Prefer `cols`;
 // `labelMm` is used only when `cols` is absent.
 
+// `fontMm` is the second control: the MAX font size. Every label uses it and
+// only overflowing names shrink (per cell). Omit it and it is derived so that
+// ~85 % of the labels keep the same size — the ~15 % longest shrink. The
+// layout returns `fontMmAuto` / `fontMmMin` / `fontMmMax` to drive a slider;
+// a supplied value is clamped to that range.
+
 // Live preview inside a dialog. `maxPreviewWidth` / `maxPreviewHeight` (px,
 // preview only — ignored by computeLabelLayout) fix the target size so the
 // sheet is deterministic on every re-render and the whole page stays visible.
@@ -61,7 +68,8 @@ preview.destroy();
 
 // Layout model — hand this to your PDF renderer.
 const layout = computeLabelLayout(roster, options);
-// { orient, cols, groupes, labelWmm, labelHmm, fontMm, levelFontMm,
+// { orient, cols, groupes, labelWmm, labelHmm,
+//   fontMm, fontMmAuto, fontMmMin, fontMmMax, levelFontMm,
 //   levelRowMm, pageWmm, pageHmm,
 //   rows: [{ cells: [{ name, level, empty }, ...] }, ...] }
 // `levelRowMm`: fixed-height band reserved at the top of every cell for the
@@ -75,15 +83,16 @@ const layout = computeLabelLayout(roster, options);
 
 ## API
 
-| Export                                             | Description                                                          |
-| -------------------------------------------------- | -------------------------------------------------------------------- |
-| `computeLabelLayout(students, options)`            | Pure layout model (throws if the roster is empty).                   |
-| `disambiguateFirstNames(students)`                 | One label string per student, first names only, collisions resolved. |
-| `resolveLabelText(students, fields)`               | `"first"` / `"last"` / `"both"`.                                     |
-| `createLabelPreview(container, students, options)` | `{ update(students?, options?), destroy() }`.                        |
-| `LABEL_COLS_BOUNDS`                                | `{ P: [1, 7], L: [1, 9] }` — labels per row, for a discrete slider.  |
-| `LABEL_MM_BOUNDS`                                  | `{ P: [30, 120], L: [30, 260] }` — bounds of the legacy `labelMm`.   |
-| `fitFontMm(text, labelWmm, nominalMm)`             | Font size that makes `text` fit, never breaking a word.              |
+| Export                                                     | Description                                                          |
+| ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| `computeLabelLayout(students, options)`                    | Pure layout model (throws if the roster is empty).                   |
+| `disambiguateFirstNames(students)`                         | One label string per student, first names only, collisions resolved. |
+| `resolveLabelText(students, fields)`                       | `"first"` / `"last"` / `"both"`.                                     |
+| `createLabelPreview(container, students, options)`         | `{ update(students?, options?), destroy() }`.                        |
+| `LABEL_COLS_BOUNDS`                                        | `{ P: [1, 7], L: [1, 9] }` — labels per row, for a discrete slider.  |
+| `LABEL_MM_BOUNDS`                                          | `{ P: [30, 120], L: [30, 260] }` — bounds of the legacy `labelMm`.   |
+| `fitFontMm(text, labelWmm, nominalMm)`                     | Font size that makes `text` fit, never breaking a word.              |
+| `autoNominalFontMm(texts, labelWmm, ceilingMm, quantile?)` | Max font size at which `1 − quantile` (default 85 %) of `texts` fit. |
 
 `students`: `Array<{ firstname?: string, lastname?: string, level?: string }>`.
 

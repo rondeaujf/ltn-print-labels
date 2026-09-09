@@ -35,7 +35,15 @@ const MARGIN_MM = 7; // PDF_MARGIN côté serveur
 const HEADER_FOOTER_MM = 42; // réserve en-tête générique + pied `_footer`
 
 const HEIGHT_RATIO = 0.42; // hauteur d'étiquette = largeur * 0.42
-const FONT_RATIO = 0.24; // corps de police du prénom = largeur * 0.24
+const FONT_RATIO = 0.24; // corps de police NOMINAL par défaut = largeur * 0.24
+// Plafond du 2e curseur (« taille de police max ») : un cran au-dessus du
+// défaut historique, pour laisser l'utilisateur pousser un peu plus grand.
+// Les noms qui déborderaient alors sont de toute façon réduits par fitFontMm().
+const FONT_RATIO_MAX = 0.3;
+// Part d'étiquettes qu'on ACCEPTE de voir rapetisser quand la police max est
+// laissée en automatique : les 15 % de noms les plus longs sont réduits, les
+// 85 % restants partagent la même taille (cf. autoNominalFontMm).
+const FONT_FIT_QUANTILE = 0.15;
 const LEVEL_FONT_RATIO = 0.5; // corps du niveau = moitié de celui du prénom
 // Bande NIVEAU : hauteur RÉSERVÉE en haut de l'étiquette, fixe, dérivée
 // uniquement de levelFontMm (donc de labelWmm) — jamais du texte d'un élève
@@ -151,6 +159,43 @@ export function fitFontMm(text, labelWmm, nominalMm) {
   return Math.max(MIN_FONT_MM, Math.floor((avail / ratio) * 10) / 10);
 }
 
+/**
+ * Police max « automatique » : la plus grande taille à laquelle AU MOINS
+ * `1 - quantile` (85 % par défaut) des libellés tiennent sans être réduits par
+ * fitFontMm(). Concrètement, la `quantile`-ième plus petite « taille
+ * d'ajustement » (`avail / largeurTexte`) de la liste, plafonnée à `ceilingMm`
+ * et jamais sous MIN_FONT_MM. Les noms dont la taille d'ajustement est
+ * inférieure rapetissent ; tous les autres partagent cette taille.
+ * @param {string[]} texts libellés déjà résolus (resolveLabelText)
+ * @param {number} labelWmm largeur d'étiquette (mm)
+ * @param {number} ceilingMm plafond (police nominale « pleine »)
+ * @param {number} [quantile] part tolérée de libellés réduits (0..1)
+ * @returns {number} police max en mm
+ */
+export function autoNominalFontMm(
+  texts,
+  labelWmm,
+  ceilingMm,
+  quantile = FONT_FIT_QUANTILE,
+) {
+  const avail = labelWmm - LABEL_PAD_MM;
+  const list = Array.isArray(texts) ? texts : [];
+  if (avail <= 0 || !list.length) return ceilingMm;
+
+  const fitSizes = list
+    .map((t) => {
+      const ratio = textWidthRatio(t);
+      return ratio > 0 ? avail / ratio : Infinity; // libellé vide : n'impose rien
+    })
+    .sort((a, b) => a - b);
+
+  const idx = Math.min(
+    fitSizes.length - 1,
+    Math.max(0, Math.floor(quantile * fitSizes.length)),
+  );
+  return Math.max(MIN_FONT_MM, Math.min(ceilingMm, round1(fitSizes[idx])));
+}
+
 function round1(n) {
   return Math.round(n * 10) / 10;
 }
@@ -249,12 +294,15 @@ export function resolveLabelText(students, fields) {
 
 /**
  * @param {Array<{firstname?:string,lastname?:string,level?:string}>} students
- * @param {{orient?:"P"|"L",cols?:number,labelMm?:number,
+ * @param {{orient?:"P"|"L",cols?:number,labelMm?:number,fontMm?:number,
  *   fields?:"first"|"last"|"both",showLevel?:boolean}} [options]
  *   `cols` = étiquettes par ligne (1..7 en portrait, 1..9 en paysage) ; il a
- *   la priorité sur `labelMm`, conservé pour compatibilité.
+ *   la priorité sur `labelMm`, conservé pour compatibilité. `fontMm` = police
+ *   max (mm) ; absent, elle est calculée pour que ~85 % des étiquettes la
+ *   partagent (cf. `fontMmAuto`), bornée `[fontMmMin, fontMmMax]`.
  * @returns {{orient:string,cols:number,groupes:number,rowsPerPage:number,
- *   labelWmm:number,labelHmm:number,fontMm:number,levelFontMm:number,
+ *   labelWmm:number,labelHmm:number,fontMm:number,fontMmAuto:number,
+ *   fontMmMin:number,fontMmMax:number,levelFontMm:number,
  *   levelRowMm:number,pageWmm:number,pageHmm:number,
  *   rows:Array<{cells:Array<{name:string,level:string,empty:boolean,
  *     fontMm:number}>}>}}
@@ -306,9 +354,32 @@ export function computeLabelLayout(students, options = {}) {
   }
   const labelWmm = round1(usableW / cols);
   const labelHmm = round1(labelWmm * HEIGHT_RATIO);
-  // « Les deux » = prénom + nom sur l'étiquette : deux mots, il faut une police
-  // plus petite pour qu'ils tiennent (aperçu ET PDF, cf. wire lvl_font_mm).
-  const fontMm = round1(labelWmm * FONT_RATIO * (fields === "both" ? 0.6 : 1));
+
+  const text = resolveLabelText(list, fields);
+
+  // Police NOMINALE (« taille max ») : taille commune aux étiquettes dont le
+  // nom tient ; les plus longs sont réduits ensuite, cellule par cellule, par
+  // fitFontMm(). Deux façons de la fixer :
+  //
+  //  - `fontMm` fourni (2e curseur) : utilisé tel quel, borné
+  //    [fontMmMin, fontMmMax].
+  //  - absent : AUTOMATIQUE — la plus grande taille à laquelle ~85 % des noms
+  //    tiennent (autoNominalFontMm), pour une planche visuellement homogène.
+  //    Le plafond garde l'esprit historique : jamais plus gros que
+  //    largeur x 0.24 (x 0.6 en mode « les deux » : prénom + nom = deux mots
+  //    qu'il faut rentrer, aperçu ET PDF).
+  const fontCeilMm = round1(
+    labelWmm * FONT_RATIO * (fields === "both" ? 0.6 : 1),
+  );
+  const fontMmMin = MIN_FONT_MM;
+  const fontMmMax = round1(labelWmm * FONT_RATIO_MAX);
+  const fontMmAuto = autoNominalFontMm(text, labelWmm, fontCeilMm);
+  const askedFont = Number(options.fontMm);
+  const fontMm =
+    Number.isFinite(askedFont) && askedFont > 0
+      ? Math.max(fontMmMin, Math.min(fontMmMax, round1(askedFont)))
+      : fontMmAuto;
+
   const levelFontMm = round1(labelWmm * FONT_RATIO * LEVEL_FONT_RATIO);
   const levelRowMm = round1(levelFontMm * LEVEL_ROW_RATIO);
 
@@ -319,7 +390,6 @@ export function computeLabelLayout(students, options = {}) {
   // moins 1 ; une grande classe -> 1 seul groupe qui débordera en page 2).
   const groupes = Math.max(1, Math.floor(parPage / list.length));
 
-  const text = resolveLabelText(list, fields);
   const unit = list.map((s, i) => ({
     name: text[i],
     level: showLevel ? String(s.level ?? "").trim() : "",
@@ -352,6 +422,9 @@ export function computeLabelLayout(students, options = {}) {
     labelWmm,
     labelHmm,
     fontMm,
+    fontMmAuto,
+    fontMmMin,
+    fontMmMax,
     levelFontMm,
     levelRowMm,
     pageWmm,
